@@ -1,0 +1,77 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SIFIPRO – Sistema de Fidelización Profesional
+#  Uso: docker compose up --build
+#  Acceso: http://localhost:5173
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: sifipro-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sifipro_db
+      POSTGRES_USER: sifipro
+      POSTGRES_PASSWORD: Sifipro2024!
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sifipro -d sifipro_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - sifipro-net
+
+  # ── Spring Boot Backend ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./sifipro-backend
+      dockerfile: Dockerfile
+    container_name: sifipro-backend
+    restart: unless-stopped
+    ports:
+      - "8085:8081"   # expuesto solo para debug/Swagger, no lo usa el frontend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sifipro_db
+      DB_USERNAME: sifipro
+      DB_PASSWORD: Sifipro2024!
+      APP_JWT_SECRET: z9BqL4xV2mR8pW6jN3cK7hT5fD1sY0gH4vM2kF9bD6nJ3rP8tC
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sifipro-net
+
+  # ── React + nginx Frontend ───────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./sifipro-frontend
+      dockerfile: Dockerfile
+      args:
+        # String vacío: el frontend hace requests relativos (/api/...)
+        # nginx los intercepta y los proxea internamente al container backend.
+        # Mismo comportamiento que el proxy de Vite en desarrollo.
+        VITE_API_URL: ""
+    container_name: sifipro-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - sifipro-net
+
+volumes:
+  pgdata:
+    name: sifipro-pgdata
+
+networks:
+  sifipro-net:
+    driver: bridge

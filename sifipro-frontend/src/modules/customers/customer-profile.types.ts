@@ -55,11 +55,10 @@ export interface CustomerProfileResponse {
   redemptions?: CustomerProfileRedemptionEntry[] | null;
 }
 
-export interface PointsHistoryEntry {
+export type PointsHistoryEntry = {
   date: string;
-  pointsEarned?: number | string | null;
-  pointsRedeemed?: number | string | null;
-  balance?: number | string | null;
-  cumulativeBalance?: number | string | null;
-  netPoints?: number | string | null;
-}
+  points: number;
+  runningBalance: number;
+  programName: string;
+  type: "EARN" | "REDEEM";
+};

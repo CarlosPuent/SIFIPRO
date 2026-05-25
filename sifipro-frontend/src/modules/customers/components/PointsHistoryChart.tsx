@@ -53,8 +53,8 @@ function buildChartData(history: PointsHistoryEntry[]): ChartDatum[] {
     .filter((e) => Boolean(e.date))
     .map((e) => ({
       label: formatChartDate(e.date),
-      balance: toNum(e.balance ?? e.cumulativeBalance),
-      earned: toNum(e.pointsEarned),
+      balance: toNum(e.runningBalance),
+      earned: toNum(e.points),
     }));
 }
 

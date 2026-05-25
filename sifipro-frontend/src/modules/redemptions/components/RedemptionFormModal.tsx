@@ -31,22 +31,6 @@ type FormErrors = {
   redemptionDate?: string;
 };
 
-function getInitialFormValues(
-  customers: CustomerResponse[],
-  rewards: RewardResponse[],
-): RedemptionFormValues {
-  const defaultCustomer =
-    customers.find((customer) => customer.active) ?? customers[0] ?? null;
-  const defaultReward =
-    rewards.find((reward) => reward.active) ?? rewards[0] ?? null;
-
-  return {
-    customerId: defaultCustomer ? String(defaultCustomer.id) : "",
-    rewardId: defaultReward ? String(defaultReward.id) : "",
-    redemptionDate: getTodayDateInputValue(),
-    notes: "",
-  };
-}
 
 function validate(values: RedemptionFormValues): FormErrors {
   const errors: FormErrors = {};
@@ -83,17 +67,27 @@ export function RedemptionFormModal({
   const redemptionDateFieldId = useId();
   const notesFieldId = useId();
 
-  const [values, setValues] = useState<RedemptionFormValues>(() =>
-    getInitialFormValues(customers, rewards),
+  const activeRewards = useMemo(
+    () => rewards.filter((r) => r.active),
+    [rewards],
   );
+  const selectableRewards: RewardResponse[] = activeRewards.length > 0 ? activeRewards : rewards;
+
+  const [values, setValues] = useState<RedemptionFormValues>(() => {
+    const defaultCustomer =
+      customers.find((c) => c.active) ?? customers[0] ?? null;
+    const defaultReward = selectableRewards[0] ?? null;
+
+    return {
+      customerId: defaultCustomer ? String(defaultCustomer.id) : "",
+      rewardId: defaultReward ? String(defaultReward.id) : "",
+      redemptionDate: getTodayDateInputValue(),
+      notes: "",
+    };
+  });
   const [errors, setErrors] = useState<FormErrors>({});
 
   const hasCustomers = customers.length > 0;
-  const activeRewards = useMemo(
-    () => rewards.filter((reward) => reward.active),
-    [rewards],
-  );
-  const selectableRewards = activeRewards.length > 0 ? activeRewards : rewards;
   const hasRewards = selectableRewards.length > 0;
 
   useEffect(() => {
@@ -112,12 +106,9 @@ export function RedemptionFormModal({
 
   const selectedReward = useMemo(() => {
     const rewardId = Number(values.rewardId);
-    if (!Number.isFinite(rewardId)) {
-      return null;
-    }
-
-    return rewards.find((reward) => reward.id === rewardId) ?? null;
-  }, [values.rewardId, rewards]);
+    if (!Number.isFinite(rewardId) || rewardId === 0) return null;
+    return selectableRewards.find((r) => r.id === rewardId) ?? null;
+  }, [values.rewardId, selectableRewards]);
 
   const handleInputChange = (
     field: keyof RedemptionFormValues,

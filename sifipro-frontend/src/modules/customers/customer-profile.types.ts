@@ -20,6 +20,23 @@ export interface CustomerProfileRedemptionEntry {
   rewardImageUrl?: string | null;
 }
 
+
+export interface CustomerProfileStats {
+  totalTransactions: number;
+  totalRedemptions: number;
+  lifetimePointsEarned: number;
+  lifetimePointsRedeemed: number;
+}
+
+export interface CustomerProfileTierProgress {
+  currentPoints: number;
+  currentTier: string;
+  nextTier: string | null;
+  pointsForNextTier: number;
+  pointsToNextTier: number;
+  progressPercentage: number;
+}
+
 export interface CustomerProfileResponse {
   id: number;
   firstName: string;
@@ -28,11 +45,15 @@ export interface CustomerProfileResponse {
   phone: string | null;
   active: boolean;
   pointsBalance: number | string;
-  createdAt: string;
+
+  memberSince: string;
+  createdAt?: string;
   updatedAt: string;
 
   // Loyalty tier — may be provided by API or computed client-side
   tier?: string | null;
+  tierProgress: CustomerProfileTierProgress;
+  stats: CustomerProfileStats;
   tierName?: string | null;
   nextTier?: string | null;
   nextTierName?: string | null;

@@ -1,9 +1,4 @@
-import {
-  ArrowLeftRight,
-  Gift,
-  ShoppingBag,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowLeftRight, Gift, ShoppingBag, TrendingUp } from "lucide-react";
 import { formatNumber } from "../../../lib/formatters";
 import type { CustomerProfileResponse } from "../customer-profile.types";
 
@@ -32,7 +27,9 @@ function StatCard({ label, value, icon, iconBg }: StatCardProps) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
           {label}
         </p>
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}
+        >
           {icon}
         </span>
       </div>
@@ -48,13 +45,21 @@ type CustomerStatCardsProps = {
 };
 
 export function CustomerStatCards({ profile }: CustomerStatCardsProps) {
-  const totalTx = toNum(profile.totalTransactions);
-  const totalRd = toNum(profile.totalRedemptions);
+  const totalTx = toNum(
+    profile.stats?.totalTransactions ?? profile.totalTransactions,
+  );
+  const totalRd = toNum(
+    profile.stats?.totalRedemptions ?? profile.totalRedemptions,
+  );
   const lifetimeEarned = toNum(
-    profile.lifetimePointsEarned ?? profile.totalPointsEarned,
+    profile.stats?.lifetimePointsEarned ??
+      profile.lifetimePointsEarned ??
+      profile.totalPointsEarned,
   );
   const lifetimeRedeemed = toNum(
-    profile.lifetimePointsRedeemed ?? profile.totalPointsRedeemed,
+    profile.stats?.lifetimePointsRedeemed ??
+      profile.lifetimePointsRedeemed ??
+      profile.totalPointsRedeemed,
   );
 
   return (

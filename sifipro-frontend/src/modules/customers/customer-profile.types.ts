@@ -2,11 +2,10 @@ export interface CustomerProfileTransactionEntry {
   id: number;
   programConfigId?: number;
   programName?: string | null;
-  amount: number | string;
-  pointsEarned?: number | string | null;
-  awardedPoints?: number | string | null;
+  amount: number;
+  description?: string | null;
+  pointsEarned: number;
   transactionDate: string;
-  createdAt?: string;
 }
 
 export interface CustomerProfileRedemptionEntry {
@@ -14,12 +13,11 @@ export interface CustomerProfileRedemptionEntry {
   programConfigId?: number;
   programName?: string | null;
   rewardName: string;
-  pointsUsed: number | string;
+  pointsUsed: number;
   redemptionDate: string;
-  createdAt?: string;
+  status?: string | null;
   rewardImageUrl?: string | null;
 }
-
 
 export interface CustomerProfileStats {
   totalTransactions: number;
@@ -44,36 +42,13 @@ export interface CustomerProfileResponse {
   email: string;
   phone: string | null;
   active: boolean;
-  pointsBalance: number | string;
-
+  pointsBalance: number;
   memberSince: string;
-  createdAt?: string;
-  updatedAt: string;
-
-  // Loyalty tier — may be provided by API or computed client-side
-  tier?: string | null;
+  tier: string;
   tierProgress: CustomerProfileTierProgress;
   stats: CustomerProfileStats;
-  tierName?: string | null;
-  nextTier?: string | null;
-  nextTierName?: string | null;
-  pointsToNextTier?: number | string | null;
-  nextTierThreshold?: number | string | null;
-  tierProgressPercentage?: number | null;
-
-  // Lifetime stats — various possible field names from API
-  totalTransactions?: number | null;
-  totalRedemptions?: number | null;
-  lifetimePointsEarned?: number | string | null;
-  lifetimePointsRedeemed?: number | string | null;
-  totalPointsEarned?: number | string | null;
-  totalPointsRedeemed?: number | string | null;
-
-  // Recent activity — API may use either naming
-  recentTransactions?: CustomerProfileTransactionEntry[] | null;
-  recentRedemptions?: CustomerProfileRedemptionEntry[] | null;
-  transactions?: CustomerProfileTransactionEntry[] | null;
-  redemptions?: CustomerProfileRedemptionEntry[] | null;
+  recentTransactions: CustomerProfileTransactionEntry[];
+  recentRedemptions: CustomerProfileRedemptionEntry[];
 }
 
 export type PointsHistoryEntry = {

@@ -154,7 +154,8 @@ export function CustomerProfileHeader({ profile }: CustomerProfileHeaderProps) {
                 </p>
               ) : null}
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Member since {fallbackText(formatDateTime(profile.createdAt))}
+                {/* ✅ Fix: usa memberSince que es lo que devuelve el backend */}
+                Member since {fallbackText(formatDateTime(profile.memberSince))}
               </p>
             </div>
 

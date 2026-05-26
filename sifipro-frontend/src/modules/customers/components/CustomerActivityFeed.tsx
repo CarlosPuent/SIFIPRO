@@ -1,4 +1,8 @@
-import { formatDateTime, formatNumber, fallbackText } from "../../../lib/formatters";
+import {
+  formatDateTime,
+  formatNumber,
+  fallbackText,
+} from "../../../lib/formatters";
 import type {
   CustomerProfileRedemptionEntry,
   CustomerProfileTransactionEntry,
@@ -10,10 +14,8 @@ function toNum(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function resolvePoints(
-  entry: CustomerProfileTransactionEntry,
-): number {
-  return toNum(entry.pointsEarned ?? entry.awardedPoints ?? 0);
+function resolvePoints(entry: CustomerProfileTransactionEntry): number {
+  return toNum(entry.pointsEarned ?? 0);
 }
 
 type TransactionFeedProps = {
@@ -41,7 +43,10 @@ function TransactionFeed({ transactions }: TransactionFeedProps) {
           {transactions.map((tx, idx) => {
             const points = resolvePoints(tx);
             return (
-              <li key={tx.id ?? idx} className="flex items-start gap-3.5 px-5 py-3.5 transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
+              <li
+                key={tx.id ?? idx}
+                className="flex items-start gap-3.5 px-5 py-3.5 transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
+              >
                 {/* Timeline dot */}
                 <div className="mt-1.5 flex-shrink-0">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 dark:border-indigo-800/60 dark:bg-indigo-950/50">
@@ -104,7 +109,10 @@ function RedemptionFeed({ redemptions }: RedemptionFeedProps) {
       ) : (
         <ul className="divide-y divide-slate-100/80 dark:divide-slate-800/60">
           {redemptions.map((rd, idx) => (
-            <li key={rd.id ?? idx} className="flex items-start gap-3.5 px-5 py-3.5 transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
+            <li
+              key={rd.id ?? idx}
+              className="flex items-start gap-3.5 px-5 py-3.5 transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
+            >
               {/* Timeline dot */}
               <div className="mt-1.5 flex-shrink-0">
                 <div className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/50">

@@ -45,22 +45,10 @@ type CustomerStatCardsProps = {
 };
 
 export function CustomerStatCards({ profile }: CustomerStatCardsProps) {
-  const totalTx = toNum(
-    profile.stats?.totalTransactions ?? profile.totalTransactions,
-  );
-  const totalRd = toNum(
-    profile.stats?.totalRedemptions ?? profile.totalRedemptions,
-  );
-  const lifetimeEarned = toNum(
-    profile.stats?.lifetimePointsEarned ??
-      profile.lifetimePointsEarned ??
-      profile.totalPointsEarned,
-  );
-  const lifetimeRedeemed = toNum(
-    profile.stats?.lifetimePointsRedeemed ??
-      profile.lifetimePointsRedeemed ??
-      profile.totalPointsRedeemed,
-  );
+  const totalTx = toNum(profile.stats.totalTransactions);
+  const totalRd = toNum(profile.stats.totalRedemptions);
+  const lifetimeEarned = toNum(profile.stats.lifetimePointsEarned);
+  const lifetimeRedeemed = toNum(profile.stats.lifetimePointsRedeemed);
 
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

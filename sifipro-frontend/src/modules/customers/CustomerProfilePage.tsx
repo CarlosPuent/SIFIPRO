@@ -4,7 +4,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { getCustomerProfile, getCustomerPointsHistory } from "./customer-profile.service";
+import {
+  getCustomerProfile,
+  getCustomerPointsHistory,
+} from "./customer-profile.service";
 import type {
   CustomerProfileResponse,
   PointsHistoryEntry,
@@ -107,7 +110,9 @@ export function CustomerProfilePage() {
     try {
       const [profileData, historyData] = await Promise.all([
         getCustomerProfile(customerId),
-        getCustomerPointsHistory(customerId).catch(() => [] as PointsHistoryEntry[]),
+        getCustomerPointsHistory(customerId).catch(
+          () => [] as PointsHistoryEntry[],
+        ),
       ]);
 
       setProfile(profileData);
@@ -127,10 +132,8 @@ export function CustomerProfilePage() {
     navigate("/customers");
   };
 
-  const transactions =
-    profile?.recentTransactions ?? profile?.transactions ?? [];
-  const redemptions =
-    profile?.recentRedemptions ?? profile?.redemptions ?? [];
+  const transactions = profile?.recentTransactions ?? [];
+  const redemptions = profile?.recentRedemptions ?? [];
 
   if (isLoading) {
     return (

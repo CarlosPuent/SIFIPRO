@@ -6,6 +6,7 @@ import com.puent.sifipro.auth.security.RestAccessDeniedHandler;
 import com.puent.sifipro.auth.security.RestAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -60,15 +61,33 @@ public class SecurityConfig {
                                                                 "/actuator/health",
                                                                 "/actuator/info")
                                                 .permitAll()
+                                                // STAFF needs program read access to bootstrap the app context.
+                                                .requestMatchers(HttpMethod.GET, "/api/program-config/**")
+                                                .hasAnyRole("ADMIN", "STAFF")
                                                 .requestMatchers("/api/users/**", "/api/program-config/**")
                                                 .hasRole("ADMIN")
+                                                // STAFF gets read access and limited operational writes.
                                                 .requestMatchers(
+                                                                HttpMethod.GET,
                                                                 "/api/customers/**",
                                                                 "/api/rewards/**",
                                                                 "/api/transactions/**",
                                                                 "/api/redemptions/**",
                                                                 "/api/reports/**")
                                                 .hasAnyRole("ADMIN", "STAFF")
+                                                .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/customers/**",
+                                                                "/api/transactions/**",
+                                                                "/api/redemptions/**")
+                                                .hasAnyRole("ADMIN", "STAFF")
+                                                .requestMatchers(
+                                                                "/api/customers/**",
+                                                                "/api/rewards/**",
+                                                                "/api/transactions/**",
+                                                                "/api/redemptions/**",
+                                                                "/api/reports/**")
+                                                .hasRole("ADMIN")
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

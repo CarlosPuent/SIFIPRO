@@ -131,7 +131,17 @@ git clone <url-del-repositorio>
 cd SIFIPRO
 ```
 
-**2. Levantar todos los servicios**
+**2. Configurar variables de entorno**
+
+```bash
+cp .env.example .env
+```
+
+Edita `.env` y completa `POSTGRES_PASSWORD`, `DB_USERNAME`, `DB_PASSWORD` y `APP_JWT_SECRET`
+con valores reales (no uses los placeholders de ejemplo). `.env` está excluido de git —
+nunca lo subas al repositorio.
+
+**3. Levantar todos los servicios**
 
 ```bash
 docker compose up --build
@@ -139,7 +149,7 @@ docker compose up --build
 
 Docker construirá las imágenes del backend y del frontend, descargará la imagen de PostgreSQL y levantará los tres contenedores. El proceso completo toma varios minutos la primera vez; las ejecuciones posteriores son significativamente más rápidas gracias al caché de capas.
 
-**3. Esperar a que el sistema esté listo**
+**4. Esperar a que el sistema esté listo**
 
 El sistema está listo cuando aparece el siguiente mensaje en la consola:
 
@@ -147,7 +157,7 @@ El sistema está listo cuando aparece el siguiente mensaje en la consola:
 sifipro-backend | Sifipro Backend Application is running...
 ```
 
-**4. Abrir el sistema**
+**5. Abrir el sistema**
 
 ```
 http://localhost:5173
@@ -196,10 +206,11 @@ Para ejecutar el proyecto en modo desarrollo sin contenedores, cada componente d
 ```bash
 cd sifipro-backend
 
-# Configurar la conexión en src/main/resources/application-dev.properties
-# spring.datasource.url=jdbc:postgresql://localhost:5432/sifipro_db
-# spring.datasource.username=postgres
-# spring.datasource.password=tu_contraseña
+# El backend ya no tiene valores por defecto embebidos: DB_USERNAME, DB_PASSWORD y
+# APP_JWT_SECRET deben existir como variables de entorno o el arranque falla.
+export DB_USERNAME=sifipro
+export DB_PASSWORD=tu_contraseña
+export APP_JWT_SECRET=$(openssl rand -base64 48)
 
 ./mvnw spring-boot:run
 ```
@@ -226,13 +237,18 @@ La aplicación abre en `http://localhost:5173`. El servidor de desarrollo de Vit
 
 **Backend (docker-compose.yml / application-dev.properties)**
 
-| Variable                 | Descripción                          | Valor por defecto                      |
-| ------------------------ | ------------------------------------ | -------------------------------------- |
-| `SPRING_DATASOURCE_URL`  | URL de conexión a PostgreSQL         | `jdbc:postgresql://db:5432/sifipro_db` |
-| `DB_USERNAME`            | Usuario de la base de datos          | `sifipro`                              |
-| `DB_PASSWORD`            | Contraseña de la base de datos       | —                                      |
-| `APP_JWT_SECRET`         | Clave secreta para firmar tokens JWT | —                                      |
-| `SPRING_PROFILES_ACTIVE` | Perfil activo de Spring              | `dev`                                  |
+Definidas en `.env` en la raíz del repo (ver `.env.example`). Ninguna tiene un valor por
+defecto embebido en el código: si falta alguna, el arranque falla con un error claro en
+vez de usar un secreto de ejemplo silenciosamente.
+
+| Variable                 | Descripción                                    | Origen                                 |
+| ------------------------ | ----------------------------------------------- | -------------------------------------- |
+| `POSTGRES_PASSWORD`      | Password de inicialización del contenedor `db`  | `.env`                                 |
+| `DB_USERNAME`            | Usuario/rol de Postgres usado por el backend    | `.env`                                 |
+| `DB_PASSWORD`            | Contraseña de `DB_USERNAME`                     | `.env`                                 |
+| `APP_JWT_SECRET`         | Clave secreta para firmar tokens JWT            | `.env`                                 |
+| `SPRING_DATASOURCE_URL`  | URL de conexión a PostgreSQL                    | `jdbc:postgresql://db:5432/sifipro_db` |
+| `SPRING_PROFILES_ACTIVE` | Perfil activo de Spring                         | `dev`                                  |
 
 **Frontend (build argument en Docker)**
 

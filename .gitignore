@@ -38,6 +38,13 @@ sifipro-frontend/node_modules/
 sifipro-frontend/dist/
 
 # ========================================
+# PLATFORM UI
+# ========================================
+
+sifipro-platform-ui/node_modules/
+sifipro-platform-ui/dist/
+
+# ========================================
 # DOCKER
 # ========================================
 

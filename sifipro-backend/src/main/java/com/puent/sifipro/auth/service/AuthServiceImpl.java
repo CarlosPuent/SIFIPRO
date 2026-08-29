@@ -4,22 +4,18 @@ import java.util.Locale;
 import com.puent.sifipro.auth.dto.AuthResponse;
 import com.puent.sifipro.auth.dto.AuthUserResponse;
 import com.puent.sifipro.auth.dto.LoginRequest;
-import com.puent.sifipro.auth.dto.TenantOnboardingRequest;
 import com.puent.sifipro.auth.dto.TenantSummaryResponse;
 import com.puent.sifipro.auth.security.JwtService;
 import com.puent.sifipro.shared.exception.BusinessException;
 import com.puent.sifipro.shared.exception.ResourceNotFoundException;
 import com.puent.sifipro.tenant.entity.Tenant;
-import com.puent.sifipro.tenant.repository.TenantRepository;
 import com.puent.sifipro.user.entity.AppUser;
-import com.puent.sifipro.user.entity.UserRole;
 import com.puent.sifipro.user.repository.AppUserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,55 +25,16 @@ public class AuthServiceImpl implements AuthService {
     private static final String TOKEN_TYPE = "Bearer";
 
     private final AppUserRepository appUserRepository;
-    private final TenantRepository tenantRepository;
-    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
     public AuthServiceImpl(
             AppUserRepository appUserRepository,
-            TenantRepository tenantRepository,
-            PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtService jwtService) {
         this.appUserRepository = appUserRepository;
-        this.tenantRepository = tenantRepository;
-        this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-    }
-
-    @Override
-    @Transactional
-    public AuthResponse onboarding(TenantOnboardingRequest request) {
-        String normalizedTenantCode = normalizeTenantCode(request.getTenantCode());
-        if (tenantRepository.existsByCodeIgnoreCase(normalizedTenantCode)) {
-            throw new BusinessException("A tenant with this code already exists.");
-        }
-
-        String normalizedEmail = normalizeEmail(request.getAdminEmail());
-        if (appUserRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new BusinessException("A user with this email already exists.");
-        }
-
-        Tenant tenant = new Tenant();
-        tenant.setName(request.getTenantName().trim());
-        tenant.setCode(normalizedTenantCode);
-        tenant.setActive(Boolean.TRUE);
-        Tenant savedTenant = tenantRepository.save(tenant);
-
-        AppUser user = new AppUser();
-        user.setFirstName(request.getAdminFirstName().trim());
-        user.setLastName(request.getAdminLastName().trim());
-        user.setEmail(normalizedEmail);
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setRole(UserRole.ADMIN);
-        user.setActive(Boolean.TRUE);
-        user.setTenant(savedTenant);
-
-        AppUser savedUser = appUserRepository.save(user);
-        String token = jwtService.generateToken(savedUser);
-        return toAuthResponse(savedUser, token);
     }
 
     @Override
@@ -153,9 +110,5 @@ public class AuthServiceImpl implements AuthService {
 
     private String normalizeEmail(String email) {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private String normalizeTenantCode(String code) {
-        return code == null ? null : code.trim().toLowerCase(Locale.ROOT);
     }
 }

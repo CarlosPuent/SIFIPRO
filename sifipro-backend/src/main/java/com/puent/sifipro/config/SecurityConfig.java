@@ -52,7 +52,6 @@ public class SecurityConfig {
                                 .authenticationProvider(authenticationProvider())
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
-                                                                "/api/auth/onboarding",
                                                                 "/api/auth/login",
                                                                 "/api/health",
                                                                 "/v3/api-docs/**",

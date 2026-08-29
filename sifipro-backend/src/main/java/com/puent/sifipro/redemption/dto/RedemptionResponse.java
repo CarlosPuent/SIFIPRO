@@ -24,6 +24,9 @@ public class RedemptionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    @Schema(description = "Identifier of the internal user who created this redemption.", example = "3")
+    private Long createdBy;
+
     public Long getId() {
         return id;
     }
@@ -126,5 +129,13 @@ public class RedemptionResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

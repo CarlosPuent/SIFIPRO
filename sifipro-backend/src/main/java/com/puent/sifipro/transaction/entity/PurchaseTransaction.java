@@ -41,6 +41,9 @@ public class PurchaseTransaction extends BaseEntity {
     @Column(nullable = false, precision = 12, scale = 4)
     private BigDecimal pointsEarned;
 
+    @Column(name = "created_by")
+    private Long createdBy;
+
     public Customer getCustomer() {
         return customer;
     }
@@ -95,5 +98,13 @@ public class PurchaseTransaction extends BaseEntity {
 
     public void setPointsEarned(BigDecimal pointsEarned) {
         this.pointsEarned = pointsEarned;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

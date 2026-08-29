@@ -192,6 +192,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
             entry.setRunningBalance(runningBalance);
             entry.setDescription(movement.getDescription());
             entry.setProgramName(movement.getProgramConfig().getProgramName());
+            entry.setCreatedBy(movement.getCreatedBy());
             history.add(entry);
         }
 
@@ -208,6 +209,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
         response.setDescription(tx.getDescription());
         response.setTransactionDate(tx.getTransactionDate());
         response.setProgramName(tx.getProgramConfig().getProgramName());
+        response.setCreatedBy(tx.getCreatedBy());
         return response;
     }
 
@@ -219,6 +221,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
         response.setPointsUsed(redemption.getPointsUsed());
         response.setRedemptionDate(redemption.getRedemptionDate());
         response.setStatus(redemption.getStatus().name());
+        response.setCreatedBy(redemption.getCreatedBy());
         return response;
     }
 

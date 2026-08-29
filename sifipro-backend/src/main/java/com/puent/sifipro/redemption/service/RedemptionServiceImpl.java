@@ -74,6 +74,7 @@ public class RedemptionServiceImpl implements RedemptionService {
         redemption.setRedemptionDate(request.getRedemptionDate());
         redemption.setStatus(RedemptionStatus.COMPLETED);
         redemption.setNotes(normalizedNotes);
+        redemption.setCreatedBy(currentUser.getId());
 
         Redemption savedRedemption = redemptionRepository.save(redemption);
 
@@ -94,6 +95,7 @@ public class RedemptionServiceImpl implements RedemptionService {
         movement.setDescription(normalizedNotes);
         movement.setReferenceType(REDEMPTION_REFERENCE_TYPE);
         movement.setReferenceId(savedRedemption.getId());
+        movement.setCreatedBy(currentUser.getId());
         pointsMovementRepository.save(movement);
 
         return toResponse(savedRedemption);
@@ -203,6 +205,7 @@ public class RedemptionServiceImpl implements RedemptionService {
         response.setNotes(redemption.getNotes());
         response.setCreatedAt(redemption.getCreatedAt());
         response.setUpdatedAt(redemption.getUpdatedAt());
+        response.setCreatedBy(redemption.getCreatedBy());
         return response;
     }
 

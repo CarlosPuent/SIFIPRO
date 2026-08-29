@@ -33,6 +33,9 @@ public class PurchaseTransactionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    @Schema(description = "Identifier of the internal user who registered this transaction.", example = "3")
+    private Long createdBy;
+
     public Long getId() {
         return id;
     }
@@ -127,5 +130,13 @@ public class PurchaseTransactionResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

@@ -25,6 +25,9 @@ public class CustomerProfileRecentRedemptionResponse {
     @Schema(description = "Redemption status.", example = "COMPLETED")
     private String status;
 
+    @Schema(description = "Identifier of the internal user who created this redemption.", example = "3")
+    private Long createdBy;
+
     public Long getId() {
         return id;
     }
@@ -71,5 +74,13 @@ public class CustomerProfileRecentRedemptionResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

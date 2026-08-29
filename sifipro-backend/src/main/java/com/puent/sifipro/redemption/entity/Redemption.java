@@ -49,6 +49,9 @@ public class Redemption extends BaseEntity {
     @Column(length = 300)
     private String notes;
 
+    @Column(name = "created_by")
+    private Long createdBy;
+
     public Customer getCustomer() {
         return customer;
     }
@@ -111,5 +114,13 @@ public class Redemption extends BaseEntity {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

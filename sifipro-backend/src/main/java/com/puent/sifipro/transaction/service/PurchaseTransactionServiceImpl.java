@@ -81,6 +81,7 @@ public class PurchaseTransactionServiceImpl implements PurchaseTransactionServic
         transaction.setDescription(normalizedDescription);
         transaction.setTransactionDate(request.getTransactionDate());
         transaction.setPointsEarned(pointsEarned);
+        transaction.setCreatedBy(currentUser.getId());
 
         PurchaseTransaction savedTransaction = purchaseTransactionRepository.save(transaction);
 
@@ -100,6 +101,7 @@ public class PurchaseTransactionServiceImpl implements PurchaseTransactionServic
             movement.setDescription(normalizedDescription);
             movement.setReferenceType(PURCHASE_REFERENCE_TYPE);
             movement.setReferenceId(savedTransaction.getId());
+            movement.setCreatedBy(currentUser.getId());
             pointsMovementRepository.save(movement);
         }
 
@@ -231,6 +233,7 @@ public class PurchaseTransactionServiceImpl implements PurchaseTransactionServic
         response.setAwardedPoints(transaction.getPointsEarned());
         response.setCreatedAt(transaction.getCreatedAt());
         response.setUpdatedAt(transaction.getUpdatedAt());
+        response.setCreatedBy(transaction.getCreatedBy());
         return response;
     }
 
@@ -248,6 +251,7 @@ public class PurchaseTransactionServiceImpl implements PurchaseTransactionServic
         response.setMovementDate(movement.getCreatedAt());
         response.setCreatedAt(movement.getCreatedAt());
         response.setUpdatedAt(movement.getUpdatedAt());
+        response.setCreatedBy(movement.getCreatedBy());
         return response;
     }
 

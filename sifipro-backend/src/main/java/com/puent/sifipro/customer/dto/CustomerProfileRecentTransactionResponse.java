@@ -25,6 +25,9 @@ public class CustomerProfileRecentTransactionResponse {
     @Schema(description = "Loyalty program name.", example = "VIP Rewards")
     private String programName;
 
+    @Schema(description = "Identifier of the internal user who registered this transaction.", example = "3")
+    private Long createdBy;
+
     public Long getId() {
         return id;
     }
@@ -71,5 +74,13 @@ public class CustomerProfileRecentTransactionResponse {
 
     public void setProgramName(String programName) {
         this.programName = programName;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

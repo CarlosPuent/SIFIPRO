@@ -25,6 +25,9 @@ public class PointsHistoryEntryResponse {
     @Schema(description = "Loyalty program associated with this movement.", example = "VIP Rewards")
     private String programName;
 
+    @Schema(description = "Identifier of the internal user who created this movement.", example = "3")
+    private Long createdBy;
+
     public LocalDateTime getDate() {
         return date;
     }
@@ -71,5 +74,13 @@ public class PointsHistoryEntryResponse {
 
     public void setProgramName(String programName) {
         this.programName = programName;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

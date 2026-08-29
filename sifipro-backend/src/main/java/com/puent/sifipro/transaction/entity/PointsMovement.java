@@ -46,6 +46,9 @@ public class PointsMovement extends BaseEntity {
     @Column(nullable = false)
     private Long referenceId;
 
+    @Column(name = "created_by")
+    private Long createdBy;
+
     public Customer getCustomer() {
         return customer;
     }
@@ -108,5 +111,13 @@ public class PointsMovement extends BaseEntity {
 
     public void setReferenceId(Long referenceId) {
         this.referenceId = referenceId;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

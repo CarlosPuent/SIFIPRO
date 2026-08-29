@@ -10,10 +10,14 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "rewards")
 public class Reward extends BaseEntity {
+
+    @Version
+    private Long version;
 
     @Column(nullable = false, length = 120)
     private String name;
@@ -103,5 +107,9 @@ public class Reward extends BaseEntity {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 }

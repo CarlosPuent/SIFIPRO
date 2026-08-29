@@ -9,10 +9,14 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "customers")
 public class Customer extends BaseEntity {
+
+    @Version
+    private Long version;
 
     @Column(nullable = false, length = 100)
     private String firstName;
@@ -93,5 +97,9 @@ public class Customer extends BaseEntity {
 
     public void setTenant(Tenant tenant) {
         this.tenant = tenant;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 }

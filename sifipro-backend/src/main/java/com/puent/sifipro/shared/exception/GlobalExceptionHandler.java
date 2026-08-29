@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -55,6 +56,16 @@ public class GlobalExceptionHandler {
                                 ex.getMessage(),
                                 List.of());
                 return ResponseEntity.badRequest().body(response);
+        }
+
+        @ExceptionHandler(OptimisticLockingFailureException.class)
+        public ResponseEntity<ApiErrorResponse> handleOptimisticLockingFailureException(
+                        OptimisticLockingFailureException ex) {
+                ApiErrorResponse response = buildErrorResponse(
+                                HttpStatus.CONFLICT,
+                                "La operación no se pudo completar, intenta de nuevo.",
+                                List.of());
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
 
         @ExceptionHandler(DataIntegrityViolationException.class)

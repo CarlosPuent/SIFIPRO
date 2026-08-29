@@ -1,14 +1,10 @@
 import { apiClient } from '../../lib/api-client';
 import type {
-  DashboardData,
   DashboardOperationalData,
   DashboardRedemptionResponse,
   DashboardRewardResponse,
   DashboardScopeSummary,
-  DashboardSummaryResponse,
   DashboardTransactionResponse,
-  TopCustomerResponse,
-  TopRedeemedRewardResponse,
 } from './dashboard.types';
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -49,20 +45,6 @@ function buildDashboardSummary(
     programActiveRewards: rewards.filter((reward) => reward.active).length,
     programTransactions: transactions.length,
     programRedemptions: redemptions.length,
-  };
-}
-
-export async function fetchDashboardData(): Promise<DashboardData> {
-  const [summaryResponse, topCustomersResponse, topRewardsResponse] = await Promise.all([
-    apiClient.get<DashboardSummaryResponse>('/api/reports/dashboard'),
-    apiClient.get<TopCustomerResponse[]>('/api/reports/top-customers'),
-    apiClient.get<TopRedeemedRewardResponse[]>('/api/reports/top-redeemed-rewards'),
-  ]);
-
-  return {
-    summary: summaryResponse.data,
-    topCustomers: Array.isArray(topCustomersResponse.data) ? topCustomersResponse.data : [],
-    topRedeemedRewards: Array.isArray(topRewardsResponse.data) ? topRewardsResponse.data : [],
   };
 }
 

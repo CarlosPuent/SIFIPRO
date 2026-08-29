@@ -72,8 +72,7 @@ public class SecurityConfig {
                                                                 "/api/customers/**",
                                                                 "/api/rewards/**",
                                                                 "/api/transactions/**",
-                                                                "/api/redemptions/**",
-                                                                "/api/reports/**")
+                                                                "/api/redemptions/**")
                                                 .hasAnyRole("ADMIN", "STAFF")
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
@@ -85,8 +84,7 @@ public class SecurityConfig {
                                                                 "/api/customers/**",
                                                                 "/api/rewards/**",
                                                                 "/api/transactions/**",
-                                                                "/api/redemptions/**",
-                                                                "/api/reports/**")
+                                                                "/api/redemptions/**")
                                                 .hasRole("ADMIN")
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

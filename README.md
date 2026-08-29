@@ -270,7 +270,6 @@ El puerto `8085` corresponde al mapeo externo del contenedor backend. Todos los 
 | Recompensas          | `/api/rewards`      | ADMIN, STAFF     |
 | Transacciones        | `/api/transactions` | ADMIN, STAFF     |
 | Canjes               | `/api/redemptions`  | ADMIN, STAFF     |
-| Reportes             | `/api/reports`      | ADMIN, STAFF     |
 | Usuarios internos    | `/api/users`        | ADMIN            |
 | Health check         | `/actuator/health`  | Público          |
 

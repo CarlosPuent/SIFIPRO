@@ -5,7 +5,9 @@
 
 --MANUAL_APPLIED_DEV_ONLY
 --NO EJECUTAR OTRA VEZ
---PENDING CLEAN FLYWAY BASELINE
+--APPLIED — fully reflected in db/migration/V1__baseline_schema.sql (tenant_id/program_config_id
+--NOT NULL + FKs + indexes on purchase_transactions and points_movements are already part of
+--the Flyway baseline). Kept here only for historical reference; not a pending migration.
 
 
 BEGIN;

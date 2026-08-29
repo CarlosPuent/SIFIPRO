@@ -1,17 +1,15 @@
 import {
-  LayoutDashboard,
-  Zap,
+  Building2,
   type LucideIcon,
+  Zap,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { appNavigation } from "../../app/router/routes";
 import { userHasAnyRole } from "../../auth/role-utils";
 import { useAuth } from "../../auth/useAuth";
 
-// Only "/dashboard" exists in this stage. Stage 2 adds the tenant management
-// screens and their icons here.
 const navIcons: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard,
+  "/tenants": Building2,
 };
 
 const baseLinkClass =

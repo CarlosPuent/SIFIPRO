@@ -8,7 +8,7 @@ import { AppLayout } from "../../components/layout/AppLayout";
 import { AuthProvider } from "../../auth/AuthContext";
 import { ProtectedRoute } from "../../auth/ProtectedRoute";
 import { LoginPage } from "../../modules/auth/LoginPage";
-import { DashboardPage } from "../../modules/dashboard/DashboardPage";
+import { TenantsPage } from "../../modules/tenants/TenantsPage";
 import { NotFoundPage } from "../../pages/NotFoundPage";
 
 const router = createBrowserRouter([
@@ -33,8 +33,14 @@ const router = createBrowserRouter([
         element: <Navigate to={defaultRoute} replace />,
       },
       {
+        // Kept as a redirect for anything that still links to the old stage-1
+        // placeholder route.
         path: "dashboard",
-        element: <DashboardPage />,
+        element: <Navigate to={defaultRoute} replace />,
+      },
+      {
+        path: "tenants",
+        element: <TenantsPage />,
       },
       {
         path: "*",

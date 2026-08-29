@@ -2,10 +2,10 @@ import type { NavigationItem } from '../../types/navigation';
 
 export const appNavigation: NavigationItem[] = [
   {
-    label: 'Dashboard',
-    path: '/dashboard',
-    description: 'Platform overview.',
+    label: 'Tenants',
+    path: '/tenants',
+    description: 'Provision and manage platform tenants.',
   },
 ];
 
-export const defaultRoute = '/dashboard';
+export const defaultRoute = '/tenants';

@@ -33,6 +33,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflictException(ConflictException ex) {
+        ApiErrorResponse response = buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        ApiErrorResponse response = buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
     // Thrown by authenticationManager.authenticate() in AuthServiceImpl.login() — e.g.
     // wrong password, disabled account, or a role other than PLATFORM_ADMIN (which
     // CustomUserDetailsService treats as "user not found"). Exceptions thrown from a

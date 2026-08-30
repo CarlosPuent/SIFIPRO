@@ -14,6 +14,7 @@ Ambos planos comparten una única base de datos PostgreSQL, pero **solo `sifipro
 ## Contenido
 
 - [Arquitectura](#arquitectura)
+- [Arquitectura](#arquitectura)
 - [Tecnologías](#tecnologías)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Requisitos previos](#requisitos-previos)
@@ -204,12 +205,12 @@ docker compose ps
 
 **5. Abrir el sistema**
 
-| Servicio      | URL                            | Qué es                                                        |
-| ------------- | ------------------------------- | -------------------------------------------------------------- |
-| `tenant-ui`   | http://localhost:5173           | Panel operativo del comercio (clientes, recompensas, canjes…)  |
-| `platform-ui` | http://localhost:5174           | Panel del equipo de plataforma (gestión de tenants)             |
-| `tenant-api`  | http://localhost:8085           | API REST de tenant, expuesta solo para debug/Swagger            |
-| `platform-api`| http://localhost:8086           | API REST de plataforma, expuesta solo para debug                |
+| Servicio       | URL                   | Qué es                                                        |
+| -------------- | --------------------- | ------------------------------------------------------------- |
+| `tenant-ui`    | http://localhost:5173 | Panel operativo del comercio (clientes, recompensas, canjes…) |
+| `platform-ui`  | http://localhost:5174 | Panel del equipo de plataforma (gestión de tenants)           |
+| `tenant-api`   | http://localhost:8085 | API REST de tenant, expuesta solo para debug/Swagger          |
+| `platform-api` | http://localhost:8086 | API REST de plataforma, expuesta solo para debug              |
 
 Para detener todos los servicios:
 
@@ -235,11 +236,11 @@ cada arranque contra una base vacía:
 - Un tenant de demostración con datos de ejemplo (clientes, programa de lealtad, recompensas,
   transacciones y canjes) y sus dos usuarios internos.
 
-| Rol                 | Correo                     | Contraseña        | Se usa en     | Acceso    |
-| -------------------- | --------------------------- | ------------------ | -------------- | --------- |
-| Operador de plataforma | platform-admin@sifipro.com | PlatformAdmin123!  | `platform-ui`  | Gestión de tenants |
-| Administrador (tenant) | admin@sifipro.com          | Admin123!          | `tenant-ui`    | Total dentro del tenant demo |
-| Personal operativo     | staff@sifipro.com          | Staff123!          | `tenant-ui`    | Operativo dentro del tenant demo |
+| Rol                    | Correo                     | Contraseña        | Se usa en     | Acceso                           |
+| ---------------------- | -------------------------- | ----------------- | ------------- | -------------------------------- |
+| Operador de plataforma | platform-admin@sifipro.com | PlatformAdmin123! | `platform-ui` | Gestión de tenants               |
+| Administrador (tenant) | admin@sifipro.com          | Admin123!         | `tenant-ui`   | Total dentro del tenant demo     |
+| Personal operativo     | staff@sifipro.com          | Staff123!         | `tenant-ui`   | Operativo dentro del tenant demo |
 
 El administrador de tenant tiene acceso a todos los módulos de `tenant-ui` incluyendo gestión de
 usuarios y configuración de programas. El personal operativo puede registrar transacciones,
@@ -357,22 +358,22 @@ Ninguna tiene un valor por defecto embebido en el código: si falta alguna, el a
 servicio correspondiente falla con un error claro en vez de usar un secreto de ejemplo
 silenciosamente.
 
-| Variable                 | Descripción                                              | Usada por                   |
-| ------------------------- | ---------------------------------------------------------- | ---------------------------- |
-| `POSTGRES_PASSWORD`       | Password de inicialización del contenedor `db`              | `db`                          |
-| `DB_USERNAME`              | Usuario/rol de Postgres, compartido por ambos backends      | `db`, `tenant-api`, `platform-api` |
-| `DB_PASSWORD`              | Contraseña de `DB_USERNAME`                                  | `db`, `tenant-api`, `platform-api` |
-| `APP_JWT_SECRET`           | Clave para firmar tokens JWT de tenant-api                   | `tenant-api`                  |
-| `PLATFORM_JWT_SECRET`      | Clave para firmar tokens JWT de platform-api — **debe ser distinta de `APP_JWT_SECRET`** | `platform-api`                |
-| `SPRING_DATASOURCE_URL`    | URL de conexión a PostgreSQL (misma base para ambos backends) | `jdbc:postgresql://db:5432/sifipro_db` |
-| `SPRING_PROFILES_ACTIVE`   | Perfil activo de Spring (solo tenant-api tiene split dev/prod) | `dev` (solo `tenant-api`)      |
+| Variable                 | Descripción                                                                              | Usada por                              |
+| ------------------------ | ---------------------------------------------------------------------------------------- | -------------------------------------- |
+| `POSTGRES_PASSWORD`      | Password de inicialización del contenedor `db`                                           | `db`                                   |
+| `DB_USERNAME`            | Usuario/rol de Postgres, compartido por ambos backends                                   | `db`, `tenant-api`, `platform-api`     |
+| `DB_PASSWORD`            | Contraseña de `DB_USERNAME`                                                              | `db`, `tenant-api`, `platform-api`     |
+| `APP_JWT_SECRET`         | Clave para firmar tokens JWT de tenant-api                                               | `tenant-api`                           |
+| `PLATFORM_JWT_SECRET`    | Clave para firmar tokens JWT de platform-api — **debe ser distinta de `APP_JWT_SECRET`** | `platform-api`                         |
+| `SPRING_DATASOURCE_URL`  | URL de conexión a PostgreSQL (misma base para ambos backends)                            | `jdbc:postgresql://db:5432/sifipro_db` |
+| `SPRING_PROFILES_ACTIVE` | Perfil activo de Spring (solo tenant-api tiene split dev/prod)                           | `dev` (solo `tenant-api`)              |
 
 **Frontends (build argument en Docker)**
 
-| Variable              | Servicio      | Valor en Docker                        |
-| ---------------------- | -------------- | ---------------------------------------- |
-| `VITE_API_URL`         | `tenant-ui`    | `""` (relativo, proxy nginx a tenant-api) |
-| `VITE_API_BASE_URL`    | `platform-ui`  | `""` (relativo, proxy nginx a platform-api) |
+| Variable            | Servicio      | Valor en Docker                             |
+| ------------------- | ------------- | ------------------------------------------- |
+| `VITE_API_URL`      | `tenant-ui`   | `""` (relativo, proxy nginx a tenant-api)   |
+| `VITE_API_BASE_URL` | `platform-ui` | `""` (relativo, proxy nginx a platform-api) |
 
 ---
 
@@ -402,24 +403,24 @@ Todos los endpoints protegidos (en ambos servicios) requieren un token JWT en el
 
 **tenant-api** (`sifipro-backend`, base `/api`)
 
-| Módulo               | Endpoint base         | Roles con acceso |
-| --------------------- | ---------------------- | ------------------ |
-| Autenticación          | `/api/auth`            | Público (login) / autenticado (`/me`) |
-| Clientes               | `/api/customers`       | ADMIN, STAFF        |
-| Programas de lealtad   | `/api/program-config`  | ADMIN (lectura también STAFF) |
-| Recompensas            | `/api/rewards`         | ADMIN, STAFF (lectura); ADMIN (alta/edición) |
-| Transacciones          | `/api/transactions`    | ADMIN, STAFF        |
-| Canjes                 | `/api/redemptions`     | ADMIN, STAFF        |
-| Usuarios internos       | `/api/users`           | ADMIN                |
-| Health check            | `/actuator/health`     | Público              |
+| Módulo               | Endpoint base         | Roles con acceso                             |
+| -------------------- | --------------------- | -------------------------------------------- |
+| Autenticación        | `/api/auth`           | Público (login) / autenticado (`/me`)        |
+| Clientes             | `/api/customers`      | ADMIN, STAFF                                 |
+| Programas de lealtad | `/api/program-config` | ADMIN (lectura también STAFF)                |
+| Recompensas          | `/api/rewards`        | ADMIN, STAFF (lectura); ADMIN (alta/edición) |
+| Transacciones        | `/api/transactions`   | ADMIN, STAFF                                 |
+| Canjes               | `/api/redemptions`    | ADMIN, STAFF                                 |
+| Usuarios internos    | `/api/users`          | ADMIN                                        |
+| Health check         | `/actuator/health`    | Público                                      |
 
 **platform-api** (`sifipro-platform-api`, base `/api/platform`)
 
-| Módulo         | Endpoint base            | Roles con acceso |
-| --------------- | -------------------------- | ------------------ |
-| Autenticación    | `/api/platform/auth`       | Público (login) / PLATFORM_ADMIN (`/me`) |
-| Tenants          | `/api/platform/tenants`    | PLATFORM_ADMIN       |
-| Health check      | `/api/platform/health`, `/actuator/health` | Público |
+| Módulo        | Endpoint base                              | Roles con acceso                         |
+| ------------- | ------------------------------------------ | ---------------------------------------- |
+| Autenticación | `/api/platform/auth`                       | Público (login) / PLATFORM_ADMIN (`/me`) |
+| Tenants       | `/api/platform/tenants`                    | PLATFORM_ADMIN                           |
+| Health check  | `/api/platform/health`, `/actuator/health` | Público                                  |
 
 ---
 

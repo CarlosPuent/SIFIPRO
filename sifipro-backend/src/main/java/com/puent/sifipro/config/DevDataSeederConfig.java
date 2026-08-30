@@ -51,6 +51,12 @@ public class DevDataSeederConfig {
                         PurchaseTransactionService purchaseTransactionService,
                         RedemptionService redemptionService) {
                 return args -> {
+                        // Crea el operador de plataforma semilla si no existe. Independiente del
+                        // resto del seeding de abajo (que es tenant-scoped): sin este paso, cada
+                        // reset del volumen dev obliga a insertarlo a mano con SQL directo, que es
+                        // exactamente lo que se busca evitar.
+                        seedPlatformAdminIfMissing(appUserRepository, passwordEncoder);
+
                         // Crea tenant + usuarios demo si no existen, y devuelve el email del admin
                         String seedUserEmail = resolveOrCreateSeedUser(
                                         appUserRepository, tenantRepository, passwordEncoder);
@@ -126,6 +132,32 @@ public class DevDataSeederConfig {
                                         customerOne.getId(), rewardOne.getId(),
                                         now.minusDays(1), "Canje demo para presentación");
                 };
+        }
+
+        /**
+         * Crea el AppUser PLATFORM_ADMIN semilla (sin tenant) si todavía no existe.
+         * Consumido por sifipro-platform-api para el login de operador de plataforma;
+         * vive aquí porque sifipro-backend sigue siendo el único dueño del esquema y
+         * el único servicio con un seeder de datos de dev.
+         */
+        private void seedPlatformAdminIfMissing(
+                        AppUserRepository appUserRepository,
+                        PasswordEncoder passwordEncoder) {
+                String platformAdminEmail = "platform-admin@sifipro.com";
+
+                if (appUserRepository.findByEmailIgnoreCase(platformAdminEmail).isPresent()) {
+                        return;
+                }
+
+                AppUser platformAdmin = new AppUser();
+                platformAdmin.setEmail(platformAdminEmail);
+                platformAdmin.setPasswordHash(passwordEncoder.encode("PlatformAdmin123!"));
+                platformAdmin.setFirstName("Platform");
+                platformAdmin.setLastName("Admin");
+                platformAdmin.setRole(UserRole.PLATFORM_ADMIN);
+                platformAdmin.setActive(true);
+                platformAdmin.setTenant(null);
+                appUserRepository.save(platformAdmin);
         }
 
         /**

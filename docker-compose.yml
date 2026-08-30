@@ -49,6 +49,28 @@ services:
     networks:
       - sifipro-net
 
+  # ── Spring Boot Platform API ──────────────────────────────────────────────────
+  platform-api:
+    build:
+      context: ./sifipro-platform-api
+      dockerfile: Dockerfile
+    container_name: sifipro-platform-api
+    restart: unless-stopped
+    ports:
+      - "8086:8082"   # expuesto solo para debug, no lo usa platform-ui
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sifipro_db
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Deliberadamente distinto de APP_JWT_SECRET: un token de plataforma nunca
+      # debe ser válido en tenant-api, ni viceversa.
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sifipro-net
+
   # ── React + nginx Frontend ───────────────────────────────────────────────────
   frontend:
     build:
@@ -65,6 +87,24 @@ services:
       - "5173:80"
     depends_on:
       - backend
+    networks:
+      - sifipro-net
+
+  # ── React + nginx Platform UI ─────────────────────────────────────────────────
+  platform-ui:
+    build:
+      context: ./sifipro-platform-ui
+      dockerfile: Dockerfile
+      args:
+        # String vacío: platform-ui hace requests relativos (/api/...)
+        # nginx los intercepta y los proxea internamente al container platform-api.
+        VITE_API_BASE_URL: ""
+    container_name: sifipro-platform-ui
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - platform-api
     networks:
       - sifipro-net
 

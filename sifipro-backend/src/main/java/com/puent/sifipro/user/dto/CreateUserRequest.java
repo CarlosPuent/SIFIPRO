@@ -31,7 +31,7 @@ public class CreateUserRequest {
     @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
     private String password;
 
-    @Schema(description = "Assigned role.", example = "STAFF")
+    @Schema(description = "Assigned role. Only ADMIN and STAFF are accepted; PLATFORM_ADMIN is rejected with 400.", example = "STAFF", allowableValues = {"ADMIN", "STAFF"})
     @NotNull(message = "Role is required")
     private UserRole role;
 

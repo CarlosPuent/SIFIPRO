@@ -83,6 +83,13 @@ public class UserServiceImpl implements UserService {
         AppUser user = findUserByIdAndTenantId(id, tenantId);
 
         validateAssignableRole(request.getRole());
+        boolean losesAdminRole = user.getRole() == UserRole.ADMIN && request.getRole() != UserRole.ADMIN;
+        if (losesAdminRole) {
+            if (user.getId().equals(currentUser.getId())) {
+                throw new BusinessException("You cannot remove the ADMIN role from your own account.");
+            }
+            ensureAnotherActiveAdminRemains(user, tenantId);
+        }
 
         String normalizedEmail = normalizeEmail(request.getEmail());
         boolean emailChanged = !user.getEmail().equalsIgnoreCase(normalizedEmail);
@@ -113,7 +120,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse deactivateUser(Long id, String currentUserEmail) {
         AppUser currentUser = findAuthenticatedUser(currentUserEmail);
-        AppUser user = findUserByIdAndTenantId(id, currentUser.getTenant().getId());
+        Long tenantId = currentUser.getTenant().getId();
+        AppUser user = findUserByIdAndTenantId(id, tenantId);
+
+        if (user.getId().equals(currentUser.getId())) {
+            throw new BusinessException("You cannot deactivate your own account.");
+        }
+        ensureAnotherActiveAdminRemains(user, tenantId);
+
         user.setActive(Boolean.FALSE);
         AppUser updatedUser = appUserRepository.save(user);
         return toResponse(updatedUser);
@@ -145,6 +159,14 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    // Called before a change that would take `target` out of the active-ADMIN pool.
+    private void ensureAnotherActiveAdminRemains(AppUser target, Long tenantId) {
+        boolean targetIsActiveAdmin = target.getRole() == UserRole.ADMIN && Boolean.TRUE.equals(target.getActive());
+        if (targetIsActiveAdmin
+                && appUserRepository.countByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.ADMIN) <= 1) {
+            throw new BusinessException("The tenant must keep at least one active ADMIN.");
+        }
+    }
 
     private AppUser findUserByIdAndTenantId(Long id, Long tenantId) {
         return appUserRepository.findByIdAndTenantId(id, tenantId)

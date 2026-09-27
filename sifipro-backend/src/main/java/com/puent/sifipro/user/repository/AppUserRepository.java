@@ -3,6 +3,7 @@ package com.puent.sifipro.user.repository;
 import java.util.List;
 import java.util.Optional;
 import com.puent.sifipro.user.entity.AppUser;
+import com.puent.sifipro.user.entity.UserRole;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -20,4 +21,6 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     List<AppUser> findAllByTenantIdOrderByIdAsc(Long tenantId);
 
     Optional<AppUser> findByIdAndTenantId(Long id, Long tenantId);
+
+    long countByTenantIdAndRoleAndActiveTrue(Long tenantId, UserRole role);
 }

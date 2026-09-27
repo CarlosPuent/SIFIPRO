@@ -1,5 +1,6 @@
 package com.puent.sifipro.user.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -24,8 +25,8 @@ import com.puent.sifipro.user.entity.UserRole;
 import com.puent.sifipro.user.repository.AppUserRepository;
 
 /**
- * Pure unit tests (Mockito, no Spring context, no database) for the role rules
- * of tenant user management.
+ * Pure unit tests (Mockito, no Spring context, no database) for the role and
+ * self-protection rules of tenant user management.
  */
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -82,9 +83,54 @@ class UserServiceImplTest {
         verify(appUserRepository, never()).save(any());
     }
 
+    @Test
+    void deactivateUser_ownAccount_isRejected() {
+        givenCurrentAdminAndTarget(currentAdmin);
 
+        assertThatThrownBy(() -> userService.deactivateUser(1L, ADMIN_EMAIL))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("You cannot deactivate your own account.");
 
+        assertThat(currentAdmin.getActive()).isTrue();
+        verify(appUserRepository, never()).save(any());
+    }
 
+    @Test
+    void updateUser_removingOwnAdminRole_isRejected() {
+        givenCurrentAdminAndTarget(currentAdmin);
+
+        assertThatThrownBy(() -> userService.updateUser(1L, updateRequest(currentAdmin, UserRole.STAFF), ADMIN_EMAIL))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("You cannot remove the ADMIN role from your own account.");
+
+        assertThat(currentAdmin.getRole()).isEqualTo(UserRole.ADMIN);
+        verify(appUserRepository, never()).save(any());
+    }
+
+    @Test
+    void deactivateUser_lastActiveAdmin_isRejected() {
+        AppUser otherAdmin = user(3L, "other-admin@tenant.test", UserRole.ADMIN, currentAdmin.getTenant());
+        givenCurrentAdminAndTarget(otherAdmin);
+        when(appUserRepository.countByTenantIdAndRoleAndActiveTrue(TENANT_ID, UserRole.ADMIN)).thenReturn(1L);
+
+        assertThatThrownBy(() -> userService.deactivateUser(3L, ADMIN_EMAIL))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("The tenant must keep at least one active ADMIN.");
+
+        verify(appUserRepository, never()).save(any());
+    }
+
+    @Test
+    void deactivateUser_otherStaff_isAllowed() {
+        AppUser staff = user(2L, "staff@tenant.test", UserRole.STAFF, currentAdmin.getTenant());
+        givenCurrentAdminAndTarget(staff);
+        when(appUserRepository.save(staff)).thenReturn(staff);
+
+        userService.deactivateUser(2L, ADMIN_EMAIL);
+
+        assertThat(staff.getActive()).isFalse();
+        verify(appUserRepository).save(staff);
+    }
 
     private void givenCurrentAdminAndTarget(AppUser target) {
         when(appUserRepository.findByEmailIgnoreCase(ADMIN_EMAIL)).thenReturn(Optional.of(currentAdmin));

@@ -31,6 +31,14 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("User not found with email: " + username);
         }
 
+        // A genuine platform operator never belongs to a tenant. A PLATFORM_ADMIN row
+        // with a tenant_id can only come from tenant-side user management (escalation
+        // attempt or bad data), so it is rejected the same way. getTenant() is only
+        // null-checked, so the lazy proxy is never initialized.
+        if (user.getTenant() != null) {
+            throw new UsernameNotFoundException("User not found with email: " + username);
+        }
+
         return User.withUsername(user.getEmail())
                 .password(user.getPasswordHash())
                 .roles(user.getRole().name())

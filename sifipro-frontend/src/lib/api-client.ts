@@ -1,8 +1,8 @@
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL;
 
-type UnauthorizedHandler = () => void;
+type UnauthorizedHandler = (error: AxiosError) => void;
 
 const unauthorizedHandlers = new Set<UnauthorizedHandler>();
 
@@ -19,7 +19,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       unauthorizedHandlers.forEach((handler) => {
-        handler();
+        handler(error);
       });
     }
 

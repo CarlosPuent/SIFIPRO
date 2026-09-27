@@ -12,7 +12,9 @@ import {
   getCurrentUser,
   getStoredAccessToken,
   loginRequest,
+  resolveForcedLogoutNotice,
   storeAccessToken,
+  storeAuthNotice,
 } from "./auth.service";
 import type { AuthUser, LoginRequest, TenantSummary } from "./auth.types";
 import { onApiUnauthorized, setApiClientAuthToken } from "../lib/api-client";
@@ -75,12 +77,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onApiUnauthorized(() => {
+    const unsubscribe = onApiUnauthorized((error) => {
       if (isHandlingUnauthorizedRef.current) {
         return;
       }
 
       isHandlingUnauthorizedRef.current = true;
+      // Suspended tenant / deactivated user: explain the logout on the login page.
+      const notice = resolveForcedLogoutNotice(error.response?.data);
+      if (notice) {
+        storeAuthNotice(notice);
+      }
       clearSession();
       redirectToLoginPage();
       isHandlingUnauthorizedRef.current = false;

@@ -17,7 +17,7 @@ import {
 
 const FEATURES = [
   "Tenant lifecycle management",
-  "Cross-tenant visibility and metrics",
+  "Tenant provisioning with its first ADMIN user",
   "Centralized platform administration",
 ];
 

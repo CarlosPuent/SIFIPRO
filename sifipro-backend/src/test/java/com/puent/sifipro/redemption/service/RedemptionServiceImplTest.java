@@ -26,6 +26,7 @@ import com.puent.sifipro.tenant.entity.Tenant;
 import com.puent.sifipro.transaction.entity.PointsMovement;
 import com.puent.sifipro.transaction.entity.PointsMovementType;
 import com.puent.sifipro.transaction.repository.PointsMovementRepository;
+import com.puent.sifipro.transaction.service.ProgramPointsBalanceCalculator;
 import com.puent.sifipro.user.entity.AppUser;
 import com.puent.sifipro.user.entity.UserRole;
 import com.puent.sifipro.user.repository.AppUserRepository;
@@ -55,7 +56,8 @@ class RedemptionServiceImplTest {
     void setUp() {
         redemptionService = new RedemptionServiceImpl(
                 redemptionRepository, customerRepository, rewardRepository,
-                pointsMovementRepository, appUserRepository, programConfigRepository);
+                pointsMovementRepository, appUserRepository, programConfigRepository,
+                new ProgramPointsBalanceCalculator(pointsMovementRepository));
 
         Tenant tenant = new Tenant();
         tenant.setId(TENANT_ID);

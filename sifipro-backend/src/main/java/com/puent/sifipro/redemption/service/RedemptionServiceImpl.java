@@ -21,6 +21,7 @@ import com.puent.sifipro.shared.exception.ResourceNotFoundException;
 import com.puent.sifipro.transaction.entity.PointsMovement;
 import com.puent.sifipro.transaction.entity.PointsMovementType;
 import com.puent.sifipro.transaction.repository.PointsMovementRepository;
+import com.puent.sifipro.transaction.service.ProgramPointsBalanceCalculator;
 import com.puent.sifipro.user.entity.AppUser;
 import com.puent.sifipro.user.repository.AppUserRepository;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class RedemptionServiceImpl implements RedemptionService {
     private final PointsMovementRepository pointsMovementRepository;
     private final AppUserRepository appUserRepository;
     private final ProgramConfigRepository programConfigRepository;
+    private final ProgramPointsBalanceCalculator programPointsBalanceCalculator;
 
     public RedemptionServiceImpl(
             RedemptionRepository redemptionRepository,
@@ -44,13 +46,15 @@ public class RedemptionServiceImpl implements RedemptionService {
             RewardRepository rewardRepository,
             PointsMovementRepository pointsMovementRepository,
             AppUserRepository appUserRepository,
-            ProgramConfigRepository programConfigRepository) {
+            ProgramConfigRepository programConfigRepository,
+            ProgramPointsBalanceCalculator programPointsBalanceCalculator) {
         this.redemptionRepository = redemptionRepository;
         this.customerRepository = customerRepository;
         this.rewardRepository = rewardRepository;
         this.pointsMovementRepository = pointsMovementRepository;
         this.appUserRepository = appUserRepository;
         this.programConfigRepository = programConfigRepository;
+        this.programPointsBalanceCalculator = programPointsBalanceCalculator;
     }
 
     @Override
@@ -157,7 +161,7 @@ public class RedemptionServiceImpl implements RedemptionService {
 
         // Same calculation createRedemption validates against, so the UI shows exactly
         // what the redemption rules will accept.
-        BigDecimal availablePoints = calculateProgramBalance(customerId, tenantId, programConfigId);
+        BigDecimal availablePoints = programPointsBalanceCalculator.calculate(customerId, tenantId, programConfigId);
         return new ProgramPointsBalanceResponse(
                 customerId, programConfig.getId(), programConfig.getProgramName(), availablePoints);
     }
@@ -175,35 +179,13 @@ public class RedemptionServiceImpl implements RedemptionService {
             throw new BusinessException("Reward is out of stock.");
         }
 
-        BigDecimal customerProgramBalance = calculateProgramBalance(customer.getId(), tenantId,
+        BigDecimal customerProgramBalance = programPointsBalanceCalculator.calculate(customer.getId(), tenantId,
                 reward.getProgramConfig().getId());
         BigDecimal requiredPoints = reward.getRequiredPoints().setScale(4, RoundingMode.HALF_UP);
 
         if (customerProgramBalance.compareTo(requiredPoints) < 0) {
             throw new BusinessException("Insufficient points for this program.");
         }
-    }
-
-    private BigDecimal calculateProgramBalance(Long customerId, Long tenantId, Long programConfigId) {
-        BigDecimal balance = BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
-
-        List<PointsMovement> movements = pointsMovementRepository
-                .findAllByCustomerIdAndTenantIdAndProgramConfigIdOrderByIdAsc(customerId, tenantId, programConfigId);
-
-        for (PointsMovement movement : movements) {
-            BigDecimal movementPoints = movement.getPoints() == null
-                    ? BigDecimal.ZERO
-                    : movement.getPoints().setScale(4, RoundingMode.HALF_UP);
-
-            if (movement.getType() == PointsMovementType.REDEEM || movement.getType() == PointsMovementType.EXPIRE) {
-                balance = balance.add(movementPoints.abs().negate());
-                continue;
-            }
-
-            balance = balance.add(movementPoints);
-        }
-
-        return balance;
     }
 
     private AppUser findAuthenticatedUser(String currentUserEmail) {

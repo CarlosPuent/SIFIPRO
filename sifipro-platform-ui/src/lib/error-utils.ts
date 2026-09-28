@@ -60,11 +60,19 @@ function readFromPayload(payload: unknown): string | null {
   );
 }
 
+// Shown for every 403, whatever the backend body says, so a blocked action always
+// reads the same way in toasts and error states.
+export const FORBIDDEN_MESSAGE = "You don't have permission to perform this action.";
+
 export function extractErrorMessage(
   error: unknown,
   fallback = "An unexpected error occurred.",
 ): string {
   if (axios.isAxiosError(error)) {
+    if (error.response?.status === 403) {
+      return FORBIDDEN_MESSAGE;
+    }
+
     const payloadMessage = readFromPayload(error.response?.data);
     if (payloadMessage) {
       return payloadMessage;

@@ -3,9 +3,10 @@ import { SurfaceCard } from "../../../components/ui/SurfaceCard";
 type ReportMetricCardProps = {
   label: string;
   value: string;
+  hint?: string;
 };
 
-export function ReportMetricCard({ label, value }: ReportMetricCardProps) {
+export function ReportMetricCard({ label, value, hint }: ReportMetricCardProps) {
   return (
     <SurfaceCard className="relative overflow-hidden p-4 sm:p-5">
       <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-slate-300 via-slate-200 to-transparent dark:from-slate-700 dark:via-slate-800" />
@@ -15,6 +16,9 @@ export function ReportMetricCard({ label, value }: ReportMetricCardProps) {
       <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
         {value}
       </p>
+      {hint ? (
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>
+      ) : null}
     </SurfaceCard>
   );
 }

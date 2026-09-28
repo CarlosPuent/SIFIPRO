@@ -1,72 +1,59 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../../auth/useAuth";
-import { InlineAlert } from "../../components/ui/InlineAlert";
+import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
+import { DateField } from "../../components/ui/form";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { formatNumber } from "../../lib/formatters";
+import { formatInteger, formatNumber, formatPoints } from "../../lib/formatters";
 import { useProgram } from "../program-config/useProgram";
+import { PointsChart, SalesChart, TierDistributionChart } from "./components/ReportCharts";
 import { ReportMetricCard } from "./components/ReportMetricCard";
+import { StockAlertsReportTable } from "./components/StockAlertsReportTable";
 import { TopCustomersReportTable } from "./components/TopCustomersReportTable";
 import { TopRedeemedRewardsReportTable } from "./components/TopRedeemedRewardsReportTable";
-import { getReportsData } from "./reports.service";
-import type {
-  ReportsScopeSummary,
-  TopCustomerResponse,
-  TopRedeemedRewardResponse,
-} from "./reports.types";
+import {
+  DEFAULT_REPORT_PRESET,
+  REPORT_PRESETS,
+  defaultGranularity,
+  presetRange,
+  type ReportPreset,
+} from "./report-dates";
+import { downloadReportCsv, getReportsData, type CsvExportKind } from "./reports.service";
+import type { ReportGranularity, ReportRange, ReportsData } from "./reports.types";
 
-type FeedbackState = {
-  kind: "error";
-  message: string;
-} | null;
+const INITIAL_RANGE = presetRange(DEFAULT_REPORT_PRESET);
 
-function buildMetricItems(summary: ReportsScopeSummary) {
+function buildMetricItems(data: ReportsData) {
+  const { summary } = data;
   return [
+    { label: "Purchases", value: formatInteger(summary.purchases) },
+    { label: "Sales Amount", value: `$${formatNumber(summary.totalAmount, 2)}` },
+    { label: "Points Issued", value: formatPoints(summary.pointsIssued) },
+    { label: "Points Redeemed", value: formatPoints(summary.pointsRedeemed) },
+    { label: "Redemptions", value: formatInteger(summary.redemptions) },
     {
-      label: "Customers in Tenant",
-      value: formatNumber(summary.tenantCustomers),
+      label: "Purchasing Customers",
+      value: formatInteger(summary.purchasingCustomers),
+      hint: "With at least one purchase in the period",
     },
     {
-      label: "Active Customers in Tenant",
-      value: formatNumber(summary.tenantActiveCustomers),
+      label: "New Customers",
+      value: formatInteger(summary.newCustomers),
+      hint: "Registered in the period (whole tenant)",
     },
     {
-      label: "Rewards in Program",
-      value: formatNumber(summary.programRewards),
-    },
-    {
-      label: "Active Rewards in Program",
-      value: formatNumber(summary.programActiveRewards),
-    },
-    {
-      label: "Transactions in Program",
-      value: formatNumber(summary.programTransactions),
-    },
-    {
-      label: "Redemptions in Program",
-      value: formatNumber(summary.programRedemptions),
-    },
-    {
-      label: "Points Issued in Program",
-      value: formatNumber(summary.totalPointsIssuedInProgram),
-    },
-    {
-      label: "Points Redeemed in Program",
-      value: formatNumber(summary.totalPointsRedeemedInProgram),
+      label: "Active Customers",
+      value: formatInteger(summary.activeCustomers),
+      hint: `Of ${formatInteger(summary.totalCustomers)} in the tenant`,
     },
   ];
 }
 
 function ReportsLoadingState() {
   return (
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <div className="h-7 w-52 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-        <div className="h-4 w-lg max-w-full animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-      </div>
-
-      <div className="h-16 animate-pulse rounded-2xl border border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/70" />
-
+    <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, index) => (
           <div
@@ -75,65 +62,11 @@ function ReportsLoadingState() {
           />
         ))}
       </div>
-
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="h-72 animate-pulse rounded-2xl border border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/70" />
-        <div className="h-72 animate-pulse rounded-2xl border border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/70" />
+        <div className="h-80 animate-pulse rounded-2xl border border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/70" />
+        <div className="h-80 animate-pulse rounded-2xl border border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/70" />
       </div>
-    </section>
-  );
-}
-
-type ReportsErrorStateProps = {
-  message: string;
-  onRetry: () => void;
-};
-
-function ReportsErrorState({ message, onRetry }: ReportsErrorStateProps) {
-  return (
-    <SurfaceCard className="p-8">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        Failed to load reports
-      </h2>
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        {message}
-      </p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="mt-5 inline-flex rounded-lg border border-slate-300 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:border-slate-400 hover:bg-slate-800 dark:border-slate-600 dark:bg-slate-100 dark:text-slate-900 dark:hover:border-slate-500 dark:hover:bg-white"
-      >
-        Retry
-      </button>
-    </SurfaceCard>
-  );
-}
-
-type ReportsProgramSelectionStateProps = {
-  isLoadingPrograms: boolean;
-  programsError: string | null;
-};
-
-function ReportsProgramSelectionState({
-  isLoadingPrograms,
-  programsError,
-}: ReportsProgramSelectionStateProps) {
-  return (
-    <SurfaceCard className="p-8">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        {isLoadingPrograms ? "Loading programs" : "No program selected"}
-      </h2>
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        {isLoadingPrograms
-          ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program on the Dashboard to load tenant and program-scoped reports."}
-      </p>
-      {programsError ? (
-        <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">
-          {programsError}
-        </p>
-      ) : null}
-    </SurfaceCard>
+    </div>
   );
 }
 
@@ -141,95 +74,33 @@ export function ReportsPage() {
   const { user } = useAuth();
   const { currentProgram, isLoadingPrograms, programsError } = useProgram();
   const currentProgramId = currentProgram?.id ?? null;
-
-  const [summary, setSummary] = useState<ReportsScopeSummary | null>(null);
-  const [topCustomers, setTopCustomers] = useState<TopCustomerResponse[]>([]);
-  const [topRedeemedRewards, setTopRedeemedRewards] = useState<
-    TopRedeemedRewardResponse[]
-  >([]);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const tenantName = user?.tenant.name ?? "Tenant unavailable";
 
-  const loadReports = useCallback(
-    async (options?: { showLoader?: boolean }) => {
-      if (!currentProgramId) {
-        setSummary(null);
-        setTopCustomers([]);
-        setTopRedeemedRewards([]);
-        setLoadError(null);
-        setFeedback(null);
-        setLastUpdatedAt(null);
-        setIsLoading(false);
-        setIsRefreshing(false);
-        return;
-      }
-
-      const showLoader = options?.showLoader ?? false;
-
-      if (showLoader) {
-        setIsLoading(true);
-        setLoadError(null);
-      } else {
-        setIsRefreshing(true);
-        setFeedback(null);
-      }
-
-      try {
-        const reportsData = await getReportsData(currentProgramId);
-
-        setSummary(reportsData.summary);
-        setTopCustomers(reportsData.topCustomers);
-        setTopRedeemedRewards(reportsData.topRedeemedRewards);
-        setLastUpdatedAt(new Date());
-
-        if (showLoader) {
-          setLoadError(null);
-        }
-      } catch (error) {
-        const message = extractErrorMessage(error);
-
-        if (showLoader) {
-          setLoadError(message);
-        } else {
-          setFeedback({
-            kind: "error",
-            message: `Could not refresh report data. ${message}`,
-          });
-        }
-      } finally {
-        if (showLoader) {
-          setIsLoading(false);
-        } else {
-          setIsRefreshing(false);
-        }
-      }
-    },
-    [currentProgramId],
+  const [preset, setPreset] = useState<ReportPreset>(DEFAULT_REPORT_PRESET);
+  const [range, setRange] = useState<ReportRange>(INITIAL_RANGE);
+  const [customDraft, setCustomDraft] = useState<ReportRange>(INITIAL_RANGE);
+  const [granularity, setGranularity] = useState<ReportGranularity>(
+    defaultGranularity(INITIAL_RANGE),
   );
+  const [refreshToken, setRefreshToken] = useState(0);
 
-  // When the selected program changes, reset the page state during render
-  // (React's "adjusting state when a prop changes" pattern); the effect below
-  // only applies the async result. Retry and Refresh go through loadReports().
-  const [syncedProgramId, setSyncedProgramId] = useState<number | null | undefined>(undefined);
-  if (syncedProgramId !== currentProgramId) {
-    setSyncedProgramId(currentProgramId);
+  const [data, setData] = useState<ReportsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<CsvExportKind | null>(null);
+
+  // Any change of program, period, bucket size or a manual refresh starts a new load.
+  // The reset happens during render (React's "adjusting state when a prop changes"
+  // pattern); the effect below only applies the async result.
+  const requestKey =
+    currentProgramId === null
+      ? null
+      : `${currentProgramId}|${range.from}|${range.to}|${granularity}|${refreshToken}`;
+  const [loadedKey, setLoadedKey] = useState<string | null | undefined>(undefined);
+  if (loadedKey !== requestKey) {
+    setLoadedKey(requestKey);
     setLoadError(null);
-    if (currentProgramId === null) {
-      setSummary(null);
-      setTopCustomers([]);
-      setTopRedeemedRewards([]);
-      setFeedback(null);
-      setLastUpdatedAt(null);
-      setIsLoading(false);
-      setIsRefreshing(false);
-    } else {
-      setIsLoading(true);
-    }
+    setIsLoading(requestKey !== null);
   }
 
   useEffect(() => {
@@ -239,16 +110,12 @@ export function ReportsPage() {
 
     let isActive = true;
 
-    getReportsData(currentProgramId)
+    getReportsData(currentProgramId, range, granularity)
       .then((reportsData) => {
-        if (!isActive) return;
-        setSummary(reportsData.summary);
-        setTopCustomers(reportsData.topCustomers);
-        setTopRedeemedRewards(reportsData.topRedeemedRewards);
-        setLastUpdatedAt(new Date());
+        if (isActive) setData(reportsData);
       })
       .catch((error: unknown) => {
-        if (isActive) setLoadError(extractErrorMessage(error));
+        if (isActive) setLoadError(extractErrorMessage(error, "Could not load reports."));
       })
       .finally(() => {
         if (isActive) setIsLoading(false);
@@ -257,97 +124,71 @@ export function ReportsPage() {
     return () => {
       isActive = false;
     };
-  }, [currentProgramId]);
+  }, [currentProgramId, range, granularity, refreshToken]);
 
-  const metricItems = useMemo(() => {
-    if (!summary) {
-      return [];
+  const applyPreset = (nextPreset: ReportPreset) => {
+    setPreset(nextPreset);
+    if (nextPreset === "custom") {
+      setCustomDraft(range);
+      return;
     }
-
-    return buildMetricItems(summary);
-  }, [summary]);
-
-  const lastUpdatedLabel = useMemo(() => {
-    if (!lastUpdatedAt) {
-      return "Not yet updated";
-    }
-
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(lastUpdatedAt);
-  }, [lastUpdatedAt]);
-
-  const handleRetry = () => {
-    void loadReports({ showLoader: true });
+    const nextRange = presetRange(nextPreset);
+    setRange(nextRange);
+    setGranularity(defaultGranularity(nextRange));
   };
 
-  const handleRefresh = () => {
-    void loadReports();
+  const customRangeError =
+    customDraft.from && customDraft.to && customDraft.from > customDraft.to
+      ? "The start date must be on or before the end date."
+      : null;
+
+  const applyCustomRange = () => {
+    if (!customDraft.from || !customDraft.to || customRangeError) {
+      return;
+    }
+    setRange(customDraft);
+    setGranularity(defaultGranularity(customDraft));
   };
 
-  if (!currentProgram && !isLoading) {
+  const handleExport = async (kind: CsvExportKind) => {
+    if (currentProgramId === null) return;
+    setExporting(kind);
+    try {
+      await downloadReportCsv(kind, currentProgramId, range);
+      toast.success(kind === "summary" ? "Summary CSV downloaded." : "Purchases CSV downloaded.");
+    } catch (error) {
+      toast.error(`Could not export CSV. ${extractErrorMessage(error)}`);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  if (!currentProgram) {
     return (
       <section className="space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">
             Reports
           </h1>
-          <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
-            Reports depend on the authenticated tenant and the currently
-            selected program.
-          </p>
         </header>
-
-        <SurfaceCard className="p-4 sm:p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Tenant
-              </p>
-              <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
-                {tenantName}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Current Program
-              </p>
-              <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
-                Select a program
-              </p>
-            </div>
-          </div>
-          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-            Customer totals are tenant-scoped. Ranking tables and operational
-            metrics are generated for the selected program only.
+        <SurfaceCard className="p-8">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            {isLoadingPrograms ? "Loading programs" : "No program selected"}
+          </h2>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            {isLoadingPrograms
+              ? "Please wait while we resolve available programs for this tenant."
+              : "Select a program on the Dashboard to load tenant and program-scoped reports."}
           </p>
+          {programsError ? (
+            <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{programsError}</p>
+          ) : null}
         </SurfaceCard>
-
-        <ReportsProgramSelectionState
-          isLoadingPrograms={isLoadingPrograms}
-          programsError={programsError}
-        />
       </section>
     );
   }
 
-  if (isLoading) {
-    return <ReportsLoadingState />;
-  }
-
-  if (loadError) {
-    return <ReportsErrorState message={loadError} onRetry={handleRetry} />;
-  }
-
-  if (!summary) {
-    return (
-      <ReportsErrorState
-        message="Report data is unavailable."
-        onRetry={handleRetry}
-      />
-    );
-  }
+  const metricItems = data ? buildMetricItems(data) : [];
 
   return (
     <section className="space-y-6">
@@ -356,66 +197,154 @@ export function ReportsPage() {
           Reports
         </h1>
         <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
-          Formal operational reporting snapshot for the authenticated tenant and
-          the currently selected program.
+          Tenant: {tenantName} · Program: {currentProgram.programName}. Figures are
+          computed by the server for this tenant only.
         </p>
       </header>
 
-      {feedback ? (
-        <InlineAlert tone="error" message={feedback.message} />
-      ) : null}
-
-      <SurfaceCard className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-800 dark:text-slate-100">
-            Report Summary
-          </h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Last updated: {lastUpdatedLabel}
-          </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Tenant: {tenantName} · Program: {currentProgram?.programName}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:border-slate-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-100 dark:text-slate-900 dark:hover:border-slate-500 dark:hover:bg-white"
-        >
-          {isRefreshing ? "Refreshing..." : "Refresh"}
-        </button>
-      </SurfaceCard>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Metrics Overview
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {metricItems.map((metric) => (
-            <ReportMetricCard
-              key={metric.label}
-              label={metric.label}
-              value={metric.value}
-            />
+      {/* ── Filters ─────────────────────────────── */}
+      <SurfaceCard className="space-y-4 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {REPORT_PRESETS.map((option) => (
+            <Button
+              key={option.key}
+              size="sm"
+              variant={preset === option.key ? "primary" : "secondary"}
+              onClick={() => applyPreset(option.key)}
+            >
+              {option.label}
+            </Button>
           ))}
         </div>
-      </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Ranking Reports
-        </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Customer ranking is based on activity within the selected program and
-          uses the tenant customer roster as reference.
-        </p>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <TopCustomersReportTable customers={topCustomers} />
-          <TopRedeemedRewardsReportTable rewards={topRedeemedRewards} />
+        {preset === "custom" ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              From
+              <DateField
+                className="mt-1"
+                value={customDraft.from}
+                max={customDraft.to || undefined}
+                onChange={(event) => setCustomDraft((current) => ({ ...current, from: event.target.value }))}
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              To
+              <DateField
+                className="mt-1"
+                value={customDraft.to}
+                min={customDraft.from || undefined}
+                onChange={(event) => setCustomDraft((current) => ({ ...current, to: event.target.value }))}
+              />
+            </label>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!customDraft.from || !customDraft.to || Boolean(customRangeError)}
+              onClick={applyCustomRange}
+            >
+              Apply
+            </Button>
+            {customRangeError ? (
+              <p className="text-xs text-rose-600 dark:text-rose-400">{customRangeError}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-4 dark:border-slate-800/80">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              Period: <span className="font-semibold text-slate-700 dark:text-slate-200">{range.from}</span> to{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-200">{range.to}</span>
+            </span>
+            <span className="inline-flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+              {(["DAY", "MONTH"] as ReportGranularity[]).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setGranularity(option)}
+                  className={`px-2.5 py-1 font-semibold transition ${
+                    granularity === option
+                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {option === "DAY" ? "By day" : "By month"}
+                </button>
+              ))}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+              disabled={isLoading}
+              onClick={() => setRefreshToken((token) => token + 1)}
+            >
+              Refresh
+            </Button>
+            <Button
+              size="sm"
+              leftIcon={<Download className="h-3.5 w-3.5" />}
+              isLoading={exporting === "summary"}
+              disabled={exporting !== null}
+              onClick={() => void handleExport("summary")}
+            >
+              Export summary CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              leftIcon={<Download className="h-3.5 w-3.5" />}
+              isLoading={exporting === "purchases"}
+              disabled={exporting !== null}
+              onClick={() => void handleExport("purchases")}
+            >
+              Export purchases CSV
+            </Button>
+          </div>
         </div>
-      </section>
+      </SurfaceCard>
+
+      {isLoading ? (
+        <ReportsLoadingState />
+      ) : loadError || !data ? (
+        <SurfaceCard className="p-8">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Failed to load reports
+          </h2>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            {loadError ?? "Report data is unavailable."}
+          </p>
+          <Button className="mt-5" onClick={() => setRefreshToken((token) => token + 1)}>
+            Retry
+          </Button>
+        </SurfaceCard>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {metricItems.map((metric) => (
+              <ReportMetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <SalesChart series={data.timeSeries} granularity={granularity} />
+            <PointsChart series={data.timeSeries} granularity={granularity} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <TopCustomersReportTable customers={data.topCustomers} />
+            <TopRedeemedRewardsReportTable rewards={data.topRewards} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <TierDistributionChart tiers={data.tierDistribution} />
+            <StockAlertsReportTable alerts={data.stockAlerts} />
+          </div>
+        </>
+      )}
     </section>
   );
 }

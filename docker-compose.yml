@@ -80,7 +80,7 @@ services:
         # String vacío: el frontend hace requests relativos (/api/...)
         # nginx los intercepta y los proxea internamente al container backend.
         # Mismo comportamiento que el proxy de Vite en desarrollo.
-        VITE_API_URL: ""
+        VITE_API_BASE_URL: ""
     container_name: sifipro-frontend
     restart: unless-stopped
     ports:

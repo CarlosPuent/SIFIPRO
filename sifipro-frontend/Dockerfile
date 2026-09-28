@@ -12,10 +12,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --silent
 
-# Recibir la URL del API como build argument.
-# Se bake dentro del bundle JS en tiempo de build (comportamiento de Vite).
-ARG VITE_API_URL=http://localhost:8085
-ENV VITE_API_URL=$VITE_API_URL
+# Recibir la URL del API como build argument (mismo nombre que lee el código en
+# tiempo de build: import.meta.env.VITE_API_BASE_URL). Vacío por defecto:
+# nginx.conf proxea /api/ internamente al backend, sin llamadas cross-origin.
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Copiar todo el código y construir para producción
 COPY . .

@@ -309,14 +309,14 @@ tu PostgreSQL local automáticamente.
 ```bash
 cd sifipro-frontend
 
-# Configurar src/.env
-# VITE_API_BASE_URL=http://localhost:8081
-
 npm install
 npm run dev
 ```
 
-La aplicación abre en `http://localhost:5173`.
+La aplicación abre en `http://localhost:5173`. No requiere configurar ningún `.env`:
+`vite.config.ts` incluye un proxy de desarrollo de `/api` hacia `http://localhost:8081`, el
+mismo mecanismo que usa nginx en Docker. Si defines `VITE_API_BASE_URL` en
+`sifipro-frontend/.env`, el frontend llamará a esa URL directamente (requiere CORS).
 
 **platform-api** (`sifipro-platform-api`)
 
@@ -372,7 +372,7 @@ silenciosamente.
 
 | Variable            | Servicio      | Valor en Docker                             |
 | ------------------- | ------------- | ------------------------------------------- |
-| `VITE_API_URL`      | `tenant-ui`   | `""` (relativo, proxy nginx a tenant-api)   |
+| `VITE_API_BASE_URL` | `tenant-ui`   | `""` (relativo, proxy nginx a tenant-api)   |
 | `VITE_API_BASE_URL` | `platform-ui` | `""` (relativo, proxy nginx a platform-api) |
 
 ---

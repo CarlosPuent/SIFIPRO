@@ -71,7 +71,8 @@ public class SecurityConfig {
                                                                 "/api/customers/**",
                                                                 "/api/rewards/**",
                                                                 "/api/transactions/**",
-                                                                "/api/redemptions/**")
+                                                                "/api/redemptions/**",
+                                                                "/api/reports/**")
                                                 .hasAnyRole("ADMIN", "STAFF")
                                                 .requestMatchers(
                                                                 HttpMethod.POST,

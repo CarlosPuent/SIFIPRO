@@ -9,8 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
 @RestControllerAdvice
@@ -80,6 +82,17 @@ public class GlobalExceptionHandler {
                                 "Operation violates database integrity constraints.",
                                 List.of(detail));
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        }
+
+        // Missing or malformed query parameters (e.g. programConfigId, from/to dates):
+        // a client error, not a 500.
+        @ExceptionHandler({MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class})
+        public ResponseEntity<ApiErrorResponse> handleInvalidRequestParameter(Exception ex) {
+                ApiErrorResponse response = buildErrorResponse(
+                                HttpStatus.BAD_REQUEST,
+                                "Invalid request parameter.",
+                                List.of(ex.getMessage()));
+                return ResponseEntity.badRequest().body(response);
         }
 
         @ExceptionHandler(HttpMessageNotReadableException.class)

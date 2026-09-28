@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
+import { isAdmin } from "../../auth/role-utils";
+import { useAuth } from "../../auth/useAuth";
 import { extractErrorMessage } from "../../lib/error-utils";
 import { CustomerFormModal } from "./components/CustomerFormModal";
 import { CustomersTable } from "./components/CustomersTable";
@@ -70,6 +72,8 @@ function CustomersEmptyState() {
 }
 
 export function CustomersPage() {
+  const { user } = useAuth();
+  const canManageCustomers = isAdmin(user);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -230,6 +234,7 @@ export function CustomersPage() {
         <CustomersTable
           customers={customers}
           actionCustomerId={actionCustomerId}
+          canManage={canManageCustomers}
           onEdit={handleOpenEdit}
           onToggleStatus={handleToggleCustomerStatus}
         />

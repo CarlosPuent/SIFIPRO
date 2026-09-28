@@ -4,6 +4,7 @@ import { RewardCard } from "./RewardCard";
 type RewardsGridProps = {
   rewards: RewardResponse[];
   actionRewardId: number | null;
+  canManage: boolean;
   onEdit: (reward: RewardResponse) => void;
   onToggleStatus: (reward: RewardResponse) => void;
 };
@@ -11,6 +12,7 @@ type RewardsGridProps = {
 export function RewardsGrid({
   rewards,
   actionRewardId,
+  canManage,
   onEdit,
   onToggleStatus,
 }: RewardsGridProps) {
@@ -21,6 +23,7 @@ export function RewardsGrid({
           key={reward.id}
           reward={reward}
           isLoading={actionRewardId === reward.id}
+          canManage={canManage}
           onEdit={onEdit}
           onToggleStatus={onToggleStatus}
         />

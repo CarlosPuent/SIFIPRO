@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
+import { isAdmin } from "../../auth/role-utils";
+import { useAuth } from "../../auth/useAuth";
 import { extractErrorMessage } from "../../lib/error-utils";
 import { useProgram } from "../program-config/ProgramContext";
 import { RewardFormModal } from "./components/RewardFormModal";
@@ -105,7 +107,13 @@ function RewardsErrorState({ message, onRetry }: RewardsErrorStateProps) {
   );
 }
 
-function RewardsEmptyState({ onAdd }: { onAdd: () => void }) {
+function RewardsEmptyState({
+  canManage,
+  onAdd,
+}: {
+  canManage: boolean;
+  onAdd: () => void;
+}) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300/80 bg-white/60 px-6 py-16 text-center dark:border-slate-700/80 dark:bg-slate-900/40">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/50">
@@ -115,23 +123,29 @@ function RewardsEmptyState({ onAdd }: { onAdd: () => void }) {
         No rewards yet
       </h3>
       <p className="mt-2 max-w-sm text-sm text-slate-500 dark:text-slate-400">
-        Create your first reward to start offering redemption options for this
-        program.
+        {canManage
+          ? "Create your first reward to start offering redemption options for this program."
+          : "An administrator has not added rewards to this program yet."}
       </p>
-      <Button
-        variant="primary"
-        size="sm"
-        leftIcon={<Plus className="h-3.5 w-3.5" />}
-        onClick={onAdd}
-        className="mt-5"
-      >
-        Add First Reward
-      </Button>
+      {canManage ? (
+        <Button
+          variant="primary"
+          size="sm"
+          leftIcon={<Plus className="h-3.5 w-3.5" />}
+          onClick={onAdd}
+          className="mt-5"
+        >
+          Add First Reward
+        </Button>
+      ) : null}
     </div>
   );
 }
 
 export function RewardsPage() {
+  const { user } = useAuth();
+  // Create/edit/activate/deactivate are ADMIN-only in tenant-api (SecurityConfig).
+  const canManageRewards = isAdmin(user);
   const { currentProgram, isLoadingPrograms, programsError } = useProgram();
   const currentProgramId = currentProgram?.id ?? null;
 
@@ -335,21 +349,24 @@ export function RewardsPage() {
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          leftIcon={<Plus className="h-3.5 w-3.5" />}
-          onClick={handleOpenCreate}
-        >
-          New Reward
-        </Button>
+        {canManageRewards ? (
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-3.5 w-3.5" />}
+            onClick={handleOpenCreate}
+          >
+            New Reward
+          </Button>
+        ) : null}
       </SurfaceCard>
 
       {rewards.length === 0 ? (
-        <RewardsEmptyState onAdd={handleOpenCreate} />
+        <RewardsEmptyState canManage={canManageRewards} onAdd={handleOpenCreate} />
       ) : (
         <RewardsGrid
           rewards={rewards}
           actionRewardId={actionRewardId}
+          canManage={canManageRewards}
           onEdit={handleOpenEdit}
           onToggleStatus={handleToggleRewardStatus}
         />

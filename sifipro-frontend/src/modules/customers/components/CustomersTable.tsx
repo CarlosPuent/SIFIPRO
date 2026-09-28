@@ -8,6 +8,8 @@ import { CustomerStatusBadge } from "./CustomerStatusBadge";
 type CustomersTableProps = {
   customers: CustomerResponse[];
   actionCustomerId: number | null;
+  // Edit/activate/deactivate are ADMIN-only in tenant-api (SecurityConfig).
+  canManage: boolean;
   onEdit: (id: number) => void;
   onToggleStatus: (customer: CustomerResponse) => void;
 };
@@ -19,6 +21,7 @@ function getFullName(customer: CustomerResponse): string {
 export function CustomersTable({
   customers,
   actionCustomerId,
+  canManage,
   onEdit,
   onToggleStatus,
 }: CustomersTableProps) {
@@ -84,21 +87,25 @@ export function CustomersTable({
                       >
                         Profile
                       </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(customer.id)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        isLoading={isActionLoading}
-                        onClick={() => onToggleStatus(customer)}
-                      >
-                        {customer.active ? "Deactivate" : "Activate"}
-                      </Button>
+                      {canManage ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEdit(customer.id)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            isLoading={isActionLoading}
+                            onClick={() => onToggleStatus(customer)}
+                          >
+                            {customer.active ? "Deactivate" : "Activate"}
+                          </Button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

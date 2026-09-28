@@ -83,14 +83,16 @@ export function CreateTenantModal({
   const [values, setValues] = useState<TenantFormValues>(EMPTY_VALUES);
   const [errors, setErrors] = useState<FormErrors>({});
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  // Clear the form every time the modal opens. Done during render (React's
+  // "adjusting state when a prop changes" pattern) instead of in an effect.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setValues(EMPTY_VALUES);
+      setErrors({});
     }
-
-    setValues(EMPTY_VALUES);
-    setErrors({});
-  }, [open]);
+  }
 
   useEffect(() => {
     if (!open) {

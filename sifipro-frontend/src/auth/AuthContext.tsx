@@ -1,5 +1,4 @@
 import {
-  createContext,
   useCallback,
   useEffect,
   useMemo,
@@ -16,22 +15,9 @@ import {
   storeAccessToken,
   storeAuthNotice,
 } from "./auth.service";
-import type { AuthUser, LoginRequest, TenantSummary } from "./auth.types";
+import { AuthContext, type AuthContextValue } from "./auth-context";
+import type { AuthUser, LoginRequest } from "./auth.types";
 import { onApiUnauthorized, setApiClientAuthToken } from "../lib/api-client";
-
-type AuthContextValue = {
-  user: AuthUser | null;
-  tenant: TenantSummary | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (payload: LoginRequest) => Promise<void>;
-  logout: () => void;
-};
-
-export const AuthContext = createContext<AuthContextValue | undefined>(
-  undefined,
-);
 
 type AuthProviderProps = {
   children: ReactNode;
@@ -49,8 +35,10 @@ function redirectToLoginPage() {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialised from storage (instead of inside the restore effect) so the effect
+  // only performs async work. isLoading is true only when there is a session to restore.
+  const [token, setToken] = useState<string | null>(() => getStoredAccessToken());
+  const [isLoading, setIsLoading] = useState(() => getStoredAccessToken() !== null);
   const isHandlingUnauthorizedRef = useRef(false);
 
   const clearSession = useCallback(() => {
@@ -100,25 +88,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const storedToken = getStoredAccessToken();
 
     if (!storedToken) {
-      setIsLoading(false);
       return;
     }
 
-    setToken(storedToken);
     setApiClientAuthToken(storedToken);
 
-    const restoreSession = async () => {
-      try {
-        const currentUser = await getCurrentUser();
+    getCurrentUser()
+      .then((currentUser) => {
         setUser(currentUser);
-      } catch {
+      })
+      .catch(() => {
         clearSession();
-      } finally {
+      })
+      .finally(() => {
         setIsLoading(false);
-      }
-    };
-
-    void restoreSession();
+      });
   }, [clearSession]);
 
   const value = useMemo<AuthContextValue>(

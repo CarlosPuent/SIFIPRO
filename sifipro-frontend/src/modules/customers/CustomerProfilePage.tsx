@@ -124,9 +124,50 @@ export function CustomerProfilePage() {
     }
   }, [customerId]);
 
+  // When the route id changes, reset the page state during render (React's
+  // "adjusting state when a prop changes" pattern). Object.is: an invalid id
+  // parses to NaN, and NaN !== NaN would re-trigger this on every render.
+  const [syncedCustomerId, setSyncedCustomerId] = useState<number | null | undefined>(undefined);
+  if (!Object.is(syncedCustomerId, customerId)) {
+    setSyncedCustomerId(customerId);
+    if (!customerId || !Number.isFinite(customerId)) {
+      setError("Invalid customer ID.");
+      setIsLoading(false);
+    } else {
+      setError(null);
+      setIsLoading(true);
+    }
+  }
+
+  // Initial load for the current id; only async results are applied here.
+  // Retry goes through loadData().
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    if (!customerId || !Number.isFinite(customerId)) {
+      return;
+    }
+
+    let isActive = true;
+
+    Promise.all([
+      getCustomerProfile(customerId),
+      getCustomerPointsHistory(customerId).catch(() => [] as PointsHistoryEntry[]),
+    ])
+      .then(([profileData, historyData]) => {
+        if (!isActive) return;
+        setProfile(profileData);
+        setPointsHistory(historyData);
+      })
+      .catch((err: unknown) => {
+        if (isActive) setError(extractErrorMessage(err, "Could not load customer profile."));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [customerId]);
 
   const handleBack = () => {
     navigate("/customers");

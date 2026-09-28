@@ -6,7 +6,7 @@ import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { isAdmin } from "../../auth/role-utils";
 import { useAuth } from "../../auth/useAuth";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { useProgram } from "../program-config/ProgramContext";
+import { useProgram } from "../program-config/useProgram";
 import { RewardFormModal } from "./components/RewardFormModal";
 import { RewardsGrid } from "./components/RewardsGrid";
 import {
@@ -176,17 +176,44 @@ export function RewardsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!currentProgramId) {
+  // When the selected program changes, reset the page state during render
+  // (React's "adjusting state when a prop changes" pattern); the effect below
+  // only applies the async result.
+  const [syncedProgramId, setSyncedProgramId] = useState<number | null | undefined>(undefined);
+  if (syncedProgramId !== currentProgramId) {
+    setSyncedProgramId(currentProgramId);
+    setLoadError(null);
+    if (currentProgramId === null) {
       setRewards([]);
-      setLoadError(null);
       setIsLoading(false);
       setModalOpen(false);
+    } else {
+      setIsLoading(true);
+    }
+  }
+
+  useEffect(() => {
+    if (currentProgramId === null) {
       return;
     }
 
-    void loadRewards(currentProgramId);
-  }, [currentProgramId, loadRewards]);
+    let isActive = true;
+
+    getRewardsByProgram(currentProgramId)
+      .then((data) => {
+        if (isActive) setRewards(data);
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentProgramId]);
 
   const handleOpenCreate = () => {
     if (!currentProgramId) {

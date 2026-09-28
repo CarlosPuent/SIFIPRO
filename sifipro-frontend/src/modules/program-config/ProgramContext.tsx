@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -11,22 +9,9 @@ import { useAuth } from "../../auth/useAuth";
 import { extractErrorMessage } from "../../lib/error-utils";
 import { getProgramConfigs } from "./program-config.service";
 import type { ProgramConfigResponse } from "./program-config.types";
-
-type ProgramContextValue = {
-  programs: ProgramConfigResponse[];
-  currentProgram: ProgramConfigResponse | null;
-  currentProgramId: number | null;
-  setCurrentProgramById: (id: number) => void;
-  reloadPrograms: () => Promise<void>;
-  isLoadingPrograms: boolean;
-  programsError: string | null;
-};
+import { ProgramContext, type ProgramContextValue } from "./useProgram";
 
 const CURRENT_PROGRAM_ID_STORAGE_KEY = "sifipro-current-program-id";
-
-const ProgramContext = createContext<ProgramContextValue | undefined>(
-  undefined,
-);
 
 type ProgramProviderProps = {
   children: ReactNode;
@@ -135,18 +120,55 @@ export function ProgramProvider({ children }: ProgramProviderProps) {
     [programs],
   );
 
-  useEffect(() => {
-    if (!isAuthenticated) {
+  // Reset or start loading when the session state changes, during render (React's
+  // "adjusting state when a prop changes" pattern); the effect below only applies
+  // the async result. Explicit reloads go through reloadPrograms().
+  const [syncedAuthState, setSyncedAuthState] = useState<boolean | undefined>(undefined);
+  if (syncedAuthState !== isAuthenticated) {
+    setSyncedAuthState(isAuthenticated);
+    setProgramsError(null);
+    if (isAuthenticated) {
+      setIsLoadingPrograms(true);
+    } else {
       setPrograms([]);
       setCurrentProgramId(null);
-      setProgramsError(null);
       setIsLoadingPrograms(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) {
       persistCurrentProgramId(null);
       return;
     }
 
-    void reloadPrograms();
-  }, [isAuthenticated, reloadPrograms]);
+    let isActive = true;
+
+    getProgramConfigs()
+      .then((nextPrograms) => {
+        if (!isActive) return;
+        setPrograms(nextPrograms);
+        setCurrentProgramId((previousProgramId) =>
+          resolveCurrentProgramId(nextPrograms, [
+            previousProgramId,
+            readStoredCurrentProgramId(),
+          ]),
+        );
+      })
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        setPrograms([]);
+        setCurrentProgramId(null);
+        setProgramsError(extractErrorMessage(error, "Could not load tenant programs."));
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingPrograms(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -188,14 +210,4 @@ export function ProgramProvider({ children }: ProgramProviderProps) {
   return (
     <ProgramContext.Provider value={value}>{children}</ProgramContext.Provider>
   );
-}
-
-export function useProgram() {
-  const context = useContext(ProgramContext);
-
-  if (!context) {
-    throw new Error("useProgram must be used within ProgramProvider.");
-  }
-
-  return context;
 }

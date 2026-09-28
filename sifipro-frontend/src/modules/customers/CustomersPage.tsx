@@ -104,9 +104,26 @@ export function CustomersPage() {
     }
   }, []);
 
+  // Initial load: state already starts as "loading", so the effect only applies
+  // the async result. Retries and refreshes go through loadCustomers().
   useEffect(() => {
-    void loadCustomers();
-  }, [loadCustomers]);
+    let isActive = true;
+
+    getCustomers()
+      .then((data) => {
+        if (isActive) setCustomers(data);
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleOpenCreate = () => {
     setModalMode("create");

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { useProgram } from "../program-config/ProgramContext";
+import { useProgram } from "../program-config/useProgram";
 import { CustomerRedemptionsTable } from "./components/CustomerRedemptionsTable";
 import { RedemptionFormModal } from "./components/RedemptionFormModal";
 import { RedemptionsTable } from "./components/RedemptionsTable";

@@ -4,7 +4,7 @@ import { InlineAlert } from "../../components/ui/InlineAlert";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
 import { formatNumber } from "../../lib/formatters";
-import { useProgram } from "../program-config/ProgramContext";
+import { useProgram } from "../program-config/useProgram";
 import { ReportMetricCard } from "./components/ReportMetricCard";
 import { TopCustomersReportTable } from "./components/TopCustomersReportTable";
 import { TopRedeemedRewardsReportTable } from "./components/TopRedeemedRewardsReportTable";
@@ -212,9 +212,52 @@ export function ReportsPage() {
     [currentProgramId],
   );
 
+  // When the selected program changes, reset the page state during render
+  // (React's "adjusting state when a prop changes" pattern); the effect below
+  // only applies the async result. Retry and Refresh go through loadReports().
+  const [syncedProgramId, setSyncedProgramId] = useState<number | null | undefined>(undefined);
+  if (syncedProgramId !== currentProgramId) {
+    setSyncedProgramId(currentProgramId);
+    setLoadError(null);
+    if (currentProgramId === null) {
+      setSummary(null);
+      setTopCustomers([]);
+      setTopRedeemedRewards([]);
+      setFeedback(null);
+      setLastUpdatedAt(null);
+      setIsLoading(false);
+      setIsRefreshing(false);
+    } else {
+      setIsLoading(true);
+    }
+  }
+
   useEffect(() => {
-    void loadReports({ showLoader: true });
-  }, [loadReports]);
+    if (currentProgramId === null) {
+      return;
+    }
+
+    let isActive = true;
+
+    getReportsData(currentProgramId)
+      .then((reportsData) => {
+        if (!isActive) return;
+        setSummary(reportsData.summary);
+        setTopCustomers(reportsData.topCustomers);
+        setTopRedeemedRewards(reportsData.topRedeemedRewards);
+        setLastUpdatedAt(new Date());
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentProgramId]);
 
   const metricItems = useMemo(() => {
     if (!summary) {

@@ -86,9 +86,26 @@ export function TenantsPage() {
     }
   }, []);
 
+  // Initial load: state already starts as "loading", so the effect only applies
+  // the async result. Retries and post-action reloads go through loadTenants().
   useEffect(() => {
-    void loadTenants();
-  }, [loadTenants]);
+    let isActive = true;
+
+    getTenants()
+      .then((data) => {
+        if (isActive) setTenants(data);
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleOpenCreate = () => {
     setModalError(null);

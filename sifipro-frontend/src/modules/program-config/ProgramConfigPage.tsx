@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { useProgram } from "./ProgramContext";
+import { useProgram } from "./useProgram";
 import {
   activateProgramConfig,
   createProgramConfig,
@@ -121,9 +121,26 @@ export function ProgramConfigPage() {
     }
   }, []);
 
+  // Initial load: state already starts as "loading", so the effect only applies
+  // the async result. Refresh and post-save reloads go through loadPrograms().
   useEffect(() => {
-    void loadPrograms();
-  }, [loadPrograms]);
+    let isActive = true;
+
+    getProgramConfigs()
+      .then((response) => {
+        if (isActive) setPrograms(response);
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error, "Could not load tenant programs."));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const activeProgramsCount = programs.filter(
     (program) => program.active,

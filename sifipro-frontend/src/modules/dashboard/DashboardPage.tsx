@@ -12,7 +12,7 @@ import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
 import { formatNumber } from "../../lib/formatters";
-import { useProgram } from "../program-config/ProgramContext";
+import { useProgram } from "../program-config/useProgram";
 import { ActivityChart } from "./components/ActivityChart";
 import { DashboardQuickActions } from "./components/DashboardQuickActions";
 import { LowStockRewardsTable } from "./components/LowStockRewardsTable";

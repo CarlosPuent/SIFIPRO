@@ -111,9 +111,26 @@ export function UsersPage() {
     }
   }, []);
 
+  // Initial load: state already starts as "loading", so the effect only applies
+  // the async result. Retries and refreshes go through loadUsers().
   useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
+    let isActive = true;
+
+    getUsers()
+      .then((data) => {
+        if (isActive) setUsers(data);
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleOpenCreate = () => {
     setModalMode("create");

@@ -105,14 +105,21 @@ export function RewardFormModal({
     [mode],
   );
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  // Re-initialise the form whenever the modal opens or its source reward changes.
+  // Done during render (React's "adjusting state when a prop changes" pattern)
+  // instead of in an effect, so the form never renders stale values.
+  const [syncedWith, setSyncedWith] = useState({ open, mode, initialReward });
+  if (
+    syncedWith.open !== open ||
+    syncedWith.mode !== mode ||
+    syncedWith.initialReward !== initialReward
+  ) {
+    setSyncedWith({ open, mode, initialReward });
+    if (open) {
+      setValues(getInitialFormValues(initialReward));
+      setErrors({});
     }
-
-    setValues(getInitialFormValues(initialReward));
-    setErrors({});
-  }, [open, mode, initialReward]);
+  }
 
   useEffect(() => {
     if (!open) {

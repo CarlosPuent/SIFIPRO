@@ -99,14 +99,21 @@ export function UserFormModal({
     [mode],
   );
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  // Re-initialise the form whenever the modal opens or its source data changes.
+  // Done during render (React's "adjusting state when a prop changes" pattern)
+  // instead of in an effect, so the form never renders stale values.
+  const [syncedWith, setSyncedWith] = useState({ open, mode, initialUser });
+  if (
+    syncedWith.open !== open ||
+    syncedWith.mode !== mode ||
+    syncedWith.initialUser !== initialUser
+  ) {
+    setSyncedWith({ open, mode, initialUser });
+    if (open) {
+      setValues(getInitialFormValues(initialUser));
+      setErrors({});
     }
-
-    setValues(getInitialFormValues(initialUser));
-    setErrors({});
-  }, [open, mode, initialUser]);
+  }
 
   useEffect(() => {
     if (!open) {

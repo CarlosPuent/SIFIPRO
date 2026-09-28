@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Gift,
+  History,
   LayoutDashboard,
   Settings2,
   Shield,
@@ -24,6 +25,7 @@ const navIcons: Record<string, LucideIcon> = {
   "/reports": BarChart3,
   "/users": Shield,
   "/program-config": Settings2,
+  "/audit": History,
 };
 
 const baseLinkClass =

@@ -17,6 +17,7 @@ import { RedemptionsPage } from "../../modules/redemptions/RedemptionsPage";
 import { ReportsPage } from "../../modules/reports/ReportsPage";
 import { UsersPage } from "../../modules/users/UsersPage";
 import { ProgramConfigPage } from "../../modules/program-config/ProgramConfigPage";
+import { AuditLogPage } from "../../modules/audit/AuditLogPage";
 import { ProgramProvider } from "../../modules/program-config/ProgramContext";
 import { NotFoundPage } from "../../pages/NotFoundPage";
 
@@ -84,6 +85,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <ProgramConfigPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "audit",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AuditLogPage />
           </ProtectedRoute>
         ),
       },

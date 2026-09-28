@@ -7,6 +7,8 @@ type ReportTableCardProps = {
   isEmpty: boolean;
   emptyMessage: string;
   headers: string[];
+  // Indexes of numeric columns: right-aligned so figures line up.
+  numericColumns?: number[];
   children: ReactNode;
 };
 
@@ -17,6 +19,7 @@ export function ReportTableCard({
   isEmpty,
   emptyMessage,
   headers,
+  numericColumns = [],
   children,
 }: ReportTableCardProps) {
   return (
@@ -39,8 +42,11 @@ export function ReportTableCard({
           <table className="min-w-full text-left">
             <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
               <tr>
-                {headers.map((header) => (
-                  <th key={header} className="px-5 py-3 font-medium">
+                {headers.map((header, index) => (
+                  <th
+                    key={header}
+                    className={`px-4 py-3 font-medium ${numericColumns.includes(index) ? "text-right" : ""}`}
+                  >
                     {header}
                   </th>
                 ))}

@@ -102,3 +102,18 @@ html.dark .ui-date-input::-webkit-calendar-picker-indicator {
 #root {
   min-height: 100vh;
 }
+
+/* Recharts 3 makes charts focusable (keyboard accessibility layer), so clicking a
+   chart drew the browser focus box behind the bars. Hide it for mouse clicks and keep
+   a visible ring only for keyboard focus. */
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none;
+}
+
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus-visible {
+  outline: 2px solid rgb(99 102 241 / 0.45);
+  outline-offset: 2px;
+  border-radius: 8px;
+}

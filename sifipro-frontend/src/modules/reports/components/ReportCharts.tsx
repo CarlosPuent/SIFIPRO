@@ -28,6 +28,7 @@ function compactNumber(value: number): string {
 
 function useChartColors() {
   const isDark = useIsDark();
+  const text = isDark ? "#e2e8f0" : "#0f172a";
   return {
     grid: isDark ? "#1e293b" : "#f1f5f9",
     axis: isDark ? "#64748b" : "#94a3b8",
@@ -36,8 +37,15 @@ function useChartColors() {
       border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`,
       borderRadius: 12,
       fontSize: 12,
-      color: isDark ? "#e2e8f0" : "#0f172a",
+      color: text,
     },
+    // Explicit text colors: by default Recharts paints tooltip items with the series
+    // color, which is unreadable for the tier bars on a dark tooltip.
+    tooltipLabel: { color: text, fontWeight: 600 },
+    tooltipItem: { color: text },
+    // Replaces Recharts' default light-gray hover block behind the bars.
+    barCursor: { fill: isDark ? "rgba(148,163,184,0.08)" : "rgba(99,102,241,0.06)" },
+    lineCursor: { stroke: isDark ? "#334155" : "#cbd5e1", strokeWidth: 1 },
   };
 }
 
@@ -101,6 +109,9 @@ export function SalesChart({ series, granularity }: TimeSeriesChartProps) {
           <YAxis axisLine={false} tickLine={false} tick={{ fill: colors.axis, fontSize: 11 }} width={48} tickFormatter={compactNumber} />
           <Tooltip
             contentStyle={colors.tooltip}
+            labelStyle={colors.tooltipLabel}
+            itemStyle={colors.tooltipItem}
+            cursor={colors.barCursor}
             formatter={(value, name) =>
               name === "amount" ? [`$${formatNumber(Number(value), 2)}`, "Amount"] : [String(value), String(name)]
             }
@@ -133,6 +144,9 @@ export function PointsChart({ series, granularity }: TimeSeriesChartProps) {
           <YAxis axisLine={false} tickLine={false} tick={{ fill: colors.axis, fontSize: 11 }} width={48} tickFormatter={compactNumber} />
           <Tooltip
             contentStyle={colors.tooltip}
+            labelStyle={colors.tooltipLabel}
+            itemStyle={colors.tooltipItem}
+            cursor={colors.lineCursor}
             formatter={(value, name) => [formatNumber(Number(value), 2), name === "issued" ? "Issued" : "Redeemed"]}
           />
           <Legend
@@ -172,7 +186,13 @@ export function TierDistributionChart({ tiers }: { tiers: TierDistributionEntry[
           <CartesianGrid vertical={false} stroke={colors.grid} />
           <XAxis dataKey="tier" axisLine={false} tickLine={false} tick={{ fill: colors.axis, fontSize: 11 }} />
           <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: colors.axis, fontSize: 11 }} width={32} />
-          <Tooltip contentStyle={colors.tooltip} formatter={(value) => [String(value), "Customers"]} />
+          <Tooltip
+            contentStyle={colors.tooltip}
+            labelStyle={colors.tooltipLabel}
+            itemStyle={colors.tooltipItem}
+            cursor={colors.barCursor}
+            formatter={(value) => [String(value), "Customers"]}
+          />
           <Bar dataKey="customers" radius={[4, 4, 0, 0]} maxBarSize={56}>
             {data.map((entry) => (
               <Cell key={entry.key} fill={TIER_COLORS[entry.key] ?? "#94a3b8"} />

@@ -13,6 +13,7 @@ class CsvWriterTest {
     @Test
     void quotesCellsWithSeparatorsQuotesOrLineBreaks() {
         assertThat(CsvWriter.escape("Lopez, Andres")).isEqualTo("\"Lopez, Andres\"");
+        assertThat(CsvWriter.escape("Compra; oferta")).isEqualTo("\"Compra; oferta\"");
         assertThat(CsvWriter.escape("15\" screen")).isEqualTo("\"15\"\" screen\"");
         assertThat(CsvWriter.escape("line1\nline2")).isEqualTo("\"line1\nline2\"");
         assertThat(CsvWriter.escape(null)).isEmpty();
@@ -32,9 +33,9 @@ class CsvWriterTest {
     }
 
     @Test
-    void writesRowsWithCrlf() {
+    void separatesWithSemicolonAndKeepsDecimalPoint() {
         StringWriter out = new StringWriter();
-        new CsvWriter(out).row("a", 1).row("b", 2).flush();
-        assertThat(out.toString()).isEqualTo("a,1\r\nb,2\r\n");
+        new CsvWriter(out).row("a", new BigDecimal("40.00")).row("b", 2).flush();
+        assertThat(out.toString()).isEqualTo("a;40.00\r\nb;2\r\n");
     }
 }

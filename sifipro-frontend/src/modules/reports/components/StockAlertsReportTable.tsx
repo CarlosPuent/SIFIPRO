@@ -14,19 +14,20 @@ export function StockAlertsReportTable({ alerts }: StockAlertsReportTableProps) 
       isEmpty={alerts.length === 0}
       emptyMessage="All active rewards have enough stock."
       headers={["Reward", "Stock", "Required Points", "Status"]}
+      numericColumns={[1, 2]}
     >
       {alerts.map((alert) => (
         <tr key={alert.id}>
-          <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-slate-100">
+          <td className="px-4 py-3.5 font-medium text-slate-800 dark:text-slate-100">
             {alert.name}
           </td>
-          <td className="px-5 py-3.5 text-slate-700 dark:text-slate-200">
+          <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-slate-700 dark:text-slate-200">
             {formatInteger(alert.stock)}
           </td>
-          <td className="px-5 py-3.5 text-slate-700 dark:text-slate-200">
+          <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-slate-700 dark:text-slate-200">
             {formatPoints(alert.requiredPoints)}
           </td>
-          <td className="px-5 py-3.5">
+          <td className="px-4 py-3.5">
             <span
               className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
                 alert.status === "OUT_OF_STOCK"

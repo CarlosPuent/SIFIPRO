@@ -14,19 +14,20 @@ export function TopRedeemedRewardsReportTable({ rewards }: TopRedeemedRewardsRep
       isEmpty={rewards.length === 0}
       emptyMessage="No redemptions in the selected period."
       headers={["Reward", "Redemptions", "Points Redeemed", "Stock"]}
+      numericColumns={[1, 2, 3]}
     >
       {rewards.map((reward) => (
         <tr key={reward.rewardId}>
-          <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-slate-100">
+          <td className="px-4 py-3.5 font-medium text-slate-800 dark:text-slate-100">
             {reward.rewardName}
           </td>
-          <td className="px-5 py-3.5 text-slate-700 dark:text-slate-200">
+          <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-slate-700 dark:text-slate-200">
             {formatInteger(reward.redemptions)}
           </td>
-          <td className="px-5 py-3.5 text-slate-700 dark:text-slate-200">
+          <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-slate-700 dark:text-slate-200">
             {formatPoints(reward.pointsRedeemed)}
           </td>
-          <td className="px-5 py-3.5 text-slate-700 dark:text-slate-200">
+          <td className="px-4 py-3.5 text-right whitespace-nowrap tabular-nums text-slate-700 dark:text-slate-200">
             {formatInteger(reward.stock)}
           </td>
         </tr>

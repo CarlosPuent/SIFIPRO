@@ -334,15 +334,15 @@ export function ReportsPage() {
             <PointsChart series={data.timeSeries} granularity={granularity} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <TopCustomersReportTable customers={data.topCustomers} />
-            <TopRedeemedRewardsReportTable rewards={data.topRewards} />
-          </div>
+          {/* Full width: five columns plus e-mails do not fit in half a row. */}
+          <TopCustomersReportTable customers={data.topCustomers} />
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <TierDistributionChart tiers={data.tierDistribution} />
+            <TopRedeemedRewardsReportTable rewards={data.topRewards} />
             <StockAlertsReportTable alerts={data.stockAlerts} />
           </div>
+
+          <TierDistributionChart tiers={data.tierDistribution} />
         </>
       )}
     </section>

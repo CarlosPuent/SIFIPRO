@@ -133,7 +133,7 @@ public class ReportController {
     }
 
     @GetMapping("/export/summary.csv")
-    @Operation(summary = "Export summary as CSV", description = "Same figures as /summary, as metric,value rows.")
+    @Operation(summary = "Export summary as CSV", description = "Same figures as /summary, as metric;value rows (semicolon-separated, UTF-8 with BOM).")
     @ApiResponse(responseCode = "200", content = @Content(mediaType = "text/csv", schema = @Schema(type = "string")))
     public void exportSummaryCsv(
             @RequestParam Long programConfigId,
@@ -149,7 +149,7 @@ public class ReportController {
 
     @GetMapping("/export/purchases.csv")
     @Operation(summary = "Export purchases as CSV",
-            description = "Every purchase of the program within the range, streamed row by row.")
+            description = "Every purchase of the program within the range, streamed row by row (semicolon-separated, UTF-8 with BOM).")
     @ApiResponse(responseCode = "200", content = @Content(mediaType = "text/csv", schema = @Schema(type = "string")))
     public void exportPurchasesCsv(
             @RequestParam Long programConfigId,

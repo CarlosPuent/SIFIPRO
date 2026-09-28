@@ -6,13 +6,20 @@ import java.io.Writer;
 import java.math.BigDecimal;
 
 /**
- * Minimal RFC 4180 CSV writer (comma separator, CRLF line endings).
+ * Minimal CSV writer following RFC 4180 quoting, with CRLF line endings.
+ *
+ * Separator is ';': Excel uses the regional "list separator", which is ';' on
+ * Spanish-locale systems, so a comma-separated file opens in a single column there.
+ * Decimals keep the '.' decimal point (BigDecimal.toPlainString), which does not
+ * clash with ';' and is the decimal symbol used in El Salvador.
  *
  * Text cells that start with = + - @ (or a tab/carriage return) are prefixed with an
  * apostrophe, so customer-entered data can never be interpreted as a formula when the
  * file is opened in a spreadsheet (CSV/formula injection). Numbers are written as-is.
  */
 public final class CsvWriter {
+
+    static final char SEPARATOR = ';';
 
     private static final String UTF8_BOM = "﻿";
 
@@ -32,7 +39,7 @@ public final class CsvWriter {
         StringBuilder line = new StringBuilder();
         for (int i = 0; i < values.length; i++) {
             if (i > 0) {
-                line.append(',');
+                line.append(SEPARATOR);
             }
             line.append(escape(values[i]));
         }
@@ -63,7 +70,8 @@ public final class CsvWriter {
         if (!text.isEmpty() && "=+-@\t\r".indexOf(text.charAt(0)) >= 0) {
             text = "'" + text;
         }
-        if (text.contains(",") || text.contains("\"") || text.contains("\n") || text.contains("\r")) {
+        if (text.indexOf(SEPARATOR) >= 0 || text.contains(",") || text.contains("\"")
+                || text.contains("\n") || text.contains("\r")) {
             text = "\"" + text.replace("\"", "\"\"") + "\"";
         }
         return text;

@@ -113,7 +113,7 @@ function TransactionsProgramSelectionState({
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         {isLoadingPrograms
           ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program from the header to register transactions and inspect points movements."}
+          : "Select a program on the Dashboard to register transactions and inspect points movements."}
       </p>
       {programsError ? (
         <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">
@@ -239,7 +239,7 @@ export function TransactionsPage() {
           </h1>
           <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
             Transactions and points movements are managed per program. Select a
-            program from the header to continue.
+            program on the Dashboard to continue.
           </p>
         </header>
 

@@ -75,7 +75,7 @@ function RewardsProgramSelectionState({
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         {isLoadingPrograms
           ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program from the header to view and manage rewards."}
+          : "Select a program on the Dashboard to view and manage rewards."}
       </p>
       {programsError ? (
         <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">
@@ -286,8 +286,8 @@ export function RewardsPage() {
             Rewards
           </h1>
           <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
-            Rewards are managed per program. Select a program from the header to
-            continue.
+            Rewards are managed per program. Select a program on the Dashboard
+            to continue.
           </p>
         </header>
 

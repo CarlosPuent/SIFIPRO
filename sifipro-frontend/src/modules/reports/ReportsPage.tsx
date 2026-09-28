@@ -126,7 +126,7 @@ function ReportsProgramSelectionState({
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         {isLoadingPrograms
           ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program from the header to load tenant and program-scoped reports."}
+          : "Select a program on the Dashboard to load tenant and program-scoped reports."}
       </p>
       {programsError ? (
         <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">

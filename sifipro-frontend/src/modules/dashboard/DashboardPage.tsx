@@ -138,7 +138,7 @@ function DashboardProgramSelectionState({
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         {isLoadingPrograms
           ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program from the header to load program-scoped operational metrics and activity."}
+          : "Select a program in the Program selector above to load program-scoped operational metrics and activity."}
       </p>
       {programsError ? (
         <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">

@@ -26,11 +26,13 @@ export interface CustomerProfileStats {
   lifetimePointsRedeemed: number;
 }
 
+// Mirrors CustomerTierProgressResponse (backend). GOLD is the highest tier: there
+// nextTier and pointsForNextTier are null and progressPercentage is 100.
 export interface CustomerProfileTierProgress {
   currentPoints: number;
   currentTier: string;
   nextTier: string | null;
-  pointsForNextTier: number;
+  pointsForNextTier: number | null;
   pointsToNextTier: number;
   progressPercentage: number;
 }

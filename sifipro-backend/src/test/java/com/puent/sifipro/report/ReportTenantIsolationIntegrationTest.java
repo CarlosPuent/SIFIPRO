@@ -15,14 +15,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.puent.sifipro.auth.security.JwtService;
 import com.puent.sifipro.customer.repository.CustomerRepository;
@@ -32,6 +28,7 @@ import com.puent.sifipro.report.dto.ReportSummaryResponse;
 import com.puent.sifipro.report.dto.TopCustomerReportEntry;
 import com.puent.sifipro.report.service.ReportService;
 import com.puent.sifipro.shared.exception.ResourceNotFoundException;
+import com.puent.sifipro.support.PostgresTestcontainersConfig;
 import com.puent.sifipro.tenant.repository.TenantRepository;
 import com.puent.sifipro.user.entity.AppUser;
 import com.puent.sifipro.user.repository.AppUserRepository;
@@ -52,22 +49,12 @@ import com.puent.sifipro.user.repository.AppUserRepository;
         "APP_JWT_SECRET=report-isolation-test-secret-0123456789-abcdefghijklmnopqrstuvwxyz"
 })
 @AutoConfigureMockMvc
-@Import(ReportTenantIsolationIntegrationTest.PostgresContainerConfig.class)
+@Import(PostgresTestcontainersConfig.class)
 class ReportTenantIsolationIntegrationTest {
 
     private static final String DEMO_STAFF = "staff@sifipro.com";
     private static final String CAFE_ADMIN = "admin@cafenorte.com";
     private static final String SHARED_CUSTOMER_EMAIL = "laura.mendoza@sifipro.dev";
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class PostgresContainerConfig {
-
-        @Bean
-        @ServiceConnection
-        PostgreSQLContainer postgres() {
-            return new PostgreSQLContainer("postgres:16-alpine");
-        }
-    }
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ReportService reportService;

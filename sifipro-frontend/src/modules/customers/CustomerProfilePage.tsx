@@ -1,6 +1,8 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { isAdmin } from "../../auth/role-utils";
+import { useAuth } from "../../auth/useAuth";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
@@ -12,6 +14,8 @@ import type {
   CustomerProfileResponse,
   PointsHistoryEntry,
 } from "./customer-profile.types";
+import { useProgram } from "../program-config/useProgram";
+import { AdjustPointsModal } from "./components/AdjustPointsModal";
 import { CustomerActivityFeed } from "./components/CustomerActivityFeed";
 import { CustomerProfileHeader } from "./components/CustomerProfileHeader";
 import { CustomerStatCards } from "./components/CustomerStatCards";
@@ -89,6 +93,11 @@ function ProfileErrorState({ message, onRetry, onBack }: ErrorStateProps) {
 export function CustomerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { programs, currentProgramId } = useProgram();
+  // Manual adjustments are ADMIN-only in tenant-api.
+  const canAdjustPoints = isAdmin(user);
+  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
 
   const [profile, setProfile] = useState<CustomerProfileResponse | null>(null);
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
@@ -226,10 +235,35 @@ export function CustomerProfilePage() {
           <ArrowLeft className="h-4 w-4" />
           Customers
         </button>
-        <p className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-600 sm:block">
-          Customer Profile
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-600 sm:block">
+            Customer Profile
+          </p>
+          {canAdjustPoints ? (
+            <Button
+              size="sm"
+              leftIcon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+              onClick={() => setIsAdjustOpen(true)}
+            >
+              Adjust points
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      {isAdjustOpen ? (
+        <AdjustPointsModal
+          customerId={profile.id}
+          customerName={`${profile.firstName} ${profile.lastName}`}
+          globalBalance={Number(profile.pointsBalance)}
+          programs={programs}
+          defaultProgramId={currentProgramId}
+          onClose={() => setIsAdjustOpen(false)}
+          onAdjusted={() => {
+            void loadData();
+          }}
+        />
+      ) : null}
 
       {/* Premium header */}
       <CustomerProfileHeader profile={profile} />

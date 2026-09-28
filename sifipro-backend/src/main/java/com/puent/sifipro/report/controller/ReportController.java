@@ -54,7 +54,8 @@ public class ReportController {
     @GetMapping("/summary")
     @Operation(summary = "Report summary",
             description = "Purchases, amount, points issued and redeemed, redemptions and customer/reward counts "
-                    + "for one program, optionally within [from, to].")
+                    + "for one program, optionally within [from, to]. Points issued come only from purchases and "
+                    + "points redeemed only from redemptions: manual adjustments are excluded (see the audit log).")
     public ResponseEntity<ReportSummaryResponse> getSummary(
             @Parameter(description = "Program of the authenticated tenant.", example = "1") @RequestParam Long programConfigId,
             @Parameter(description = "Start date, inclusive.", example = "2026-06-01")

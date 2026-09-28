@@ -13,9 +13,9 @@ public record ReportSummaryResponse(
 
         @Schema(description = "Purchases registered in the program and range.", example = "37") long purchases,
         @Schema(description = "Sum of purchase amounts.", example = "9860.00") BigDecimal totalAmount,
-        @Schema(description = "Points issued by those purchases.", example = "14790.0000") BigDecimal pointsIssued,
+        @Schema(description = "Points issued by those purchases. Manual adjustments (ADJUSTMENT) are not included.", example = "14790.0000") BigDecimal pointsIssued,
         @Schema(description = "Completed redemptions in the program and range.", example = "11") long redemptions,
-        @Schema(description = "Points consumed by those redemptions.", example = "4460.0000") BigDecimal pointsRedeemed,
+        @Schema(description = "Points consumed by those redemptions. Manual adjustments (ADJUSTMENT) are not included.", example = "4460.0000") BigDecimal pointsRedeemed,
         @Schema(description = "Distinct customers with at least one purchase in the program and range.", example = "13") long purchasingCustomers,
 
         @Schema(description = "Customers of the tenant (customers are not program-scoped).", example = "15") long totalCustomers,

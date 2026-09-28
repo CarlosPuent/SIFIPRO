@@ -43,8 +43,13 @@ public class PointsMovement extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String referenceType;
 
-    @Column(nullable = false)
+    // Null only for manual ADJUSTMENT movements (enforced by a CHECK in V4).
+    @Column
     private Long referenceId;
+
+    // Reason of a manual ADJUSTMENT (required for that type, see V4).
+    @Column(length = 255)
+    private String reason;
 
     @Column(name = "created_by")
     private Long createdBy;
@@ -111,6 +116,14 @@ public class PointsMovement extends BaseEntity {
 
     public void setReferenceId(Long referenceId) {
         this.referenceId = referenceId;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
     }
 
     public Long getCreatedBy() {

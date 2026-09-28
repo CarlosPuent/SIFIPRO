@@ -52,6 +52,18 @@
 
 CSV separados por `;` para Excel en español, cursor y texto de los tooltips de las gráficas acordes al tema, sin recuadro de foco al hacer clic, y tabla Top Customers sin scroll horizontal.
 
+### Bloque final — Bitácora de auditoría (RF-09)
+
+| Cambio | Problema que resolvía |
+|---|---|
+| Migración `V4__points_adjustments_and_audit.sql`: columna `reason` con CHECK (obligatoria, mínimo 5 caracteres, en los ajustes), `reference_id` opcional solo para ajustes e índice `(tenant_id, created_at)`. | El tipo `ADJUSTMENT` existía en el ledger, pero ningún flujo lo generaba y no había dónde guardar el motivo. |
+| Ajustes manuales de puntos: `POST /api/customers/{id}/adjustments`, solo ADMIN. Suma o resta puntos en un programa con motivo obligatorio, nunca deja saldo negativo (ni global ni del programa) y registra el autor. | Los errores de saldo no se podían corregir sin tocar la BD. |
+| Cálculo del saldo por programa extraído a un componente (`ProgramPointsBalanceCalculator`) que comparten el canje y el ajuste. | Evita dos cálculos distintos del mismo saldo. |
+| Bitácora: `GET /api/audit/points-movements` (solo ADMIN), paginada y filtrable por fechas, tipo, cliente y usuario, con autor, referencia y motivo. | RF-09 no tenía forma de consultarse. |
+| Página **Audit Log** y botón **Adjust points** en el perfil del cliente (solo ADMIN). | Sin interfaz para ajustar ni consultar. |
+| Swagger aclara que los reportes no cuentan los ajustes en puntos emitidos o canjeados. | Evita confundir correcciones con actividad comercial. |
+| 10 pruebas nuevas: 6 unitarias y 4 de integración con Testcontainers (permisos, validaciones, saldo = ledger y aislamiento de la bitácora). | — |
+
 ## b) Problemas encontrados y cómo se resolvieron
 
 | Problema | Resolución |
@@ -65,6 +77,8 @@ CSV separados por `;` para Excel en español, cursor y texto de los tooltips de 
 | Al dividir commits por cambio lógico, dos textos quedaron en el commit equivocado. | Como no había push, se reconstruyeron los últimos 6 commits y se verificó que el árbol final era idéntico y que cada commit compilaba. |
 | Una prueba de aislamiento falló por una clase compilada inconsistente en `target/` tras compilaciones incrementales. | `mvn clean test`; el README recomienda siempre `clean`. |
 | Los CSV se abrían en una sola columna en Excel con configuración regional en español. | Separador `;`, BOM UTF-8 y punto decimal. |
+| La columna `reference_id` del ledger era obligatoria, pero un ajuste manual no tiene compra ni canje de origen. | V4 la vuelve opcional **solo** para ajustes; un CHECK la sigue exigiendo en EARN y REDEEM. |
+| Con dos clases de prueba de integración, Spring levantaba dos contenedores PostgreSQL. | Configuración compartida (`PostgresTestcontainersConfig`) para reutilizar el mismo contexto y contenedor. |
 
 ## c) Decisiones técnicas y su justificación
 
@@ -79,19 +93,37 @@ CSV separados por `;` para Excel en español, cursor y texto de los tooltips de 
 | Seeder mediante los servicios de negocio. | Saldos, stock y ledger quedan consistentes por construcción. | INSERT directos en SQL. |
 | Selector de programa: se corrigieron los textos en lugar de moverlo al header. | Era la opción de menor riesgo a un día de la defensa. | Rediseñar el header. |
 | Saldo por programa como endpoint en el backend. | Usa exactamente el mismo cálculo que valida el canje: la interfaz no puede discrepar del servidor. | Sumar el ledger en el navegador. |
+| La bitácora de puntos es el propio ledger (`points_movements`), no una tabla aparte. | Cada otorgamiento, canje y ajuste ya queda ahí con autor y fecha en la misma transacción que cambia el saldo: no puede haber movimientos sin registro. | Tabla `audit_log` paralela, alimentada por separado (dos fuentes que podrían divergir). |
+| Los reportes excluyen los ajustes. | "Puntos emitidos" y "canjeados" describen la actividad comercial; las correcciones se consultan en la bitácora. | Sumarlos a emitidos o canjeados según el signo. |
 | Commits pequeños por cambio lógico y tag `avance1-baseline`. | Punto de retorno seguro y cada cambio se puede revisar o revertir por separado. | Un solo commit grande. |
 
 ## d) Pendientes para el Avance 2 y estrategia
 
+Los pendientes siguen la numeración de la propuesta, igual que `docs/MATRIZ_AVANCE.md`.
+
+### Requerimientos de la propuesta aún no completos
+
+| Pendiente | Estado actual | Estrategia |
+|---|---|---|
+| **RF-01** Datos de contacto y subdominio del tenant (60 %) | Se registran nombre y código; no hay datos de contacto ni subdominio real. | Migración nueva con columnas de contacto (email, teléfono, dirección) y formulario en platform-ui. Usar el código como subdominio (`<codigo>.sifipro…`): resolver el tenant por el host en nginx/backend y validar que coincida con el del usuario autenticado; DNS comodín en el despliegue. |
+| **RF-08** Rol y portal del cliente final (65 %) | Existen los roles de plataforma y comercio; el cliente final no tiene acceso. | Rol `CUSTOMER` con credenciales ligadas a `customers` (una por tenant), login propio y un portal de solo lectura: saldo, historial y recompensas disponibles. Los permisos se separan en `SecurityConfig` como con ADMIN/STAFF. |
+| **RNF-02** HTTPS (50 %) | JWT completo; todo corre por HTTP en local. | Terminación TLS en nginx (certificados autofirmados en local, Let's Encrypt en el despliegue), redirección 80→443 y cookies/tokens solo por HTTPS. |
+| **RNF-05** Pruebas y CI (75 %) | 35 pruebas automatizadas; sin pruebas de frontend ni pipeline. | GitHub Actions que compile, ejecute ESLint y las pruebas en cada pull request, con protección de `main`; migrar a Testcontainers las 5 pruebas de integración antiguas; pruebas de componentes (Vitest + Testing Library). |
+
+### Cambios de la propuesta que quedan como evolución
+
 | Pendiente | Estrategia |
 |---|---|
-| **RF-17** Cancelación de canjes y anulación de compras | Endpoints `PATCH …/cancel` que en una sola transacción cambien el estado a `CANCELLED` y registren movimientos compensatorios en el ledger (nunca borrar), devolviendo stock y saldo; bloqueo optimista ya existente. |
-| **RF-19** Ajustes manuales y expiración de puntos | Endpoint de ajuste solo para ADMIN con motivo obligatorio (`ADJUSTMENT`); tarea programada (`@Scheduled`) que genere movimientos `EXPIRE` según una política por programa (nueva columna vía migración V4). |
-| **RF-08** Cambio y recuperación de contraseña | "Cambiar mi contraseña" con la contraseña actual; recuperación con token de un solo uso y expiración, enviado por correo (servicio SMTP de desarrollo). |
-| **RF-05** Edición de tenant y métricas de plataforma | `PUT /api/platform/tenants/{id}` y un endpoint de métricas agregadas por tenant en platform-api, con pantalla de detalle en platform-ui. |
-| **RF-23** Búsqueda y paginación | `Pageable` y filtros en los listados de tenant-api; componente de tabla paginada compartido en las interfaces. |
-| **RF-24** Bitácora administrativa | Tabla `audit_log` (migración nueva) alimentada desde los servicios de usuarios, programas, recompensas y tenants. |
-| Swagger en platform-api (RNF-04) | Agregar springdoc a platform-api con las mismas anotaciones que tenant-api. |
-| Pruebas (RNF-05) | Migrar las pruebas de integración antiguas a Testcontainers para que no dependan de una BD local; pruebas de componentes en el frontend (Vitest + Testing Library). |
-| Integración continua (RNF-06) | Pipeline (por ejemplo GitHub Actions) que compile, ejecute ESLint y las pruebas en cada pull request, con protección de la rama `main`. |
-| Deuda técnica observada | Kit de UI duplicado entre las dos interfaces (paquete compartido), código muerto identificado en la auditoría, perfil `prod` sin seeder ni `show-sql`, rotación de los secretos que quedaron en el historial de git, y tiers configurables por tenant. |
+| Keycloak | Evaluarlo como proveedor de identidad cuando exista el rol cliente (RF-08), manteniendo la separación entre planos que hoy dan los secretos distintos. |
+| Java 21 | Actualizar la imagen base y el `pom.xml` y correr la suite completa; sin cambios de código previstos. |
+
+### Mejoras fuera de la propuesta (opcionales)
+
+| Pendiente | Estrategia |
+|---|---|
+| Cancelación de canjes y anulación de compras | `PATCH …/cancel` que cambie el estado a `CANCELLED` y registre movimientos compensatorios en el ledger (nunca borrar), devolviendo stock y saldo. |
+| Expiración de puntos | Tarea programada (`@Scheduled`) que genere movimientos `EXPIRE` según una política por programa (migración nueva). |
+| Cambio y recuperación de contraseña | "Cambiar mi contraseña" con la actual; recuperación con token de un solo uso enviado por correo. |
+| Swagger en platform-api | springdoc con las mismas anotaciones que tenant-api. |
+| Búsqueda y paginación en listados | `Pageable` y filtros en tenant-api (la bitácora ya es paginada); tabla paginada compartida. |
+| Deuda técnica | Kit de UI duplicado entre interfaces, código muerto identificado en la auditoría, perfil `prod` sin seeder ni `show-sql`, rotación de secretos que quedaron en el historial de git, tiers configurables por tenant, inmutabilidad del ledger también en la BD (trigger). |

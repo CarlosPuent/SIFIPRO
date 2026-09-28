@@ -21,6 +21,7 @@ Ambos planos comparten una única base de datos PostgreSQL, pero **solo `sifipro
 - [Credenciales y datos demo](#credenciales-y-datos-demo)
 - [Flujo de prueba end-to-end](#flujo-de-prueba-end-to-end)
 - [Reportes](#reportes)
+- [Bitácora de auditoría y ajustes](#bitácora-de-auditoría-y-ajustes)
 - [Pruebas automatizadas](#pruebas-automatizadas)
 - [Desarrollo local sin Docker](#desarrollo-local-sin-docker)
 - [Variables de entorno](#variables-de-entorno)
@@ -124,7 +125,7 @@ SIFIPRO/
 │       ├── main/resources/
 │       │   ├── application.properties
 │       │   ├── application-dev.properties
-│       │   └── db/migration/    Migraciones Flyway V1, V2 y V3
+│       │   └── db/migration/    Migraciones Flyway V1 a V4
 │       └── test/                Tests unitarios y de integración
 │
 ├── sifipro-frontend/            tenant-ui — React, operación diaria del comercio
@@ -322,6 +323,25 @@ Los CSV usan **`;` como separador** (así los abre Excel con configuración regi
 punto decimal y UTF-8 con BOM; los valores de texto que empiezan con `=`, `+`, `-` o `@` se
 neutralizan para evitar inyección de fórmulas.
 
+Los ajustes manuales **no** se cuentan como puntos emitidos ni canjeados: los reportes describen
+la actividad comercial (compras y canjes) y las correcciones se consultan en la bitácora.
+
+---
+
+## Bitácora de auditoría y ajustes
+
+Cada otorgamiento (EARN), canje (REDEEM) y ajuste manual (ADJUSTMENT) queda en `points_movements`
+con su autor y fecha, en la misma transacción que cambia el saldo.
+
+| Método | Ruta                                   | Acceso | Qué hace                                                            |
+| ------ | -------------------------------------- | ------ | ------------------------------------------------------------------- |
+| POST   | `/api/customers/{id}/adjustments`      | ADMIN  | Suma o resta puntos en un programa con motivo obligatorio (5–255 caracteres); nunca deja saldo negativo |
+| GET    | `/api/audit/points-movements`          | ADMIN  | Bitácora paginada (`page`, `size` ≤ 100), filtros `from`, `to`, `type`, `customerId`, `userId` |
+
+En `tenant-ui`, el ADMIN ajusta puntos desde el perfil del cliente (**Adjust points**) y consulta
+la bitácora en **Audit Log**. Ambos endpoints se limitan al tenant autenticado: un cliente de otro
+tenant responde 404.
+
 ---
 
 ## Pruebas automatizadas
@@ -330,7 +350,7 @@ Pruebas que **no** necesitan la base de datos de desarrollo (recomendado; usar `
 clases compiladas desactualizadas):
 
 ```bash
-# tenant-api: unitarias (Mockito) + aislamiento de reportes con Testcontainers
+# tenant-api: unitarias (Mockito) + integración con Testcontainers
 cd sifipro-backend
 ./mvnw clean test -Dtest='!SifiproBackendApplicationTests,!RedemptionConcurrencyIntegrationTest' -Dsurefire.failIfNoSpecifiedTests=false
 
@@ -346,11 +366,13 @@ cd sifipro-platform-api
 | tenant-api   | `JwtAuthenticationFilterTest`          | Unitaria                   | Un token ya emitido deja de valer si el usuario o el tenant se desactivan  |
 | tenant-api   | `RedemptionServiceImplTest`            | Unitaria                   | Saldo canjeable por programa; programa de otro tenant → 404                |
 | tenant-api   | `CsvWriterTest`                        | Unitaria                   | Separador `;`, comillas e inyección de fórmulas                            |
+| tenant-api   | `PointsAdjustmentServiceImplTest`      | Unitaria                   | Ajustes: motivo obligatorio, sin saldo negativo, cliente de otro tenant → 404 |
 | tenant-api   | `ReportTenantIsolationIntegrationTest` | Integración (Testcontainers) | Un tenant no ve datos de otro en ningún reporte ni en el CSV             |
+| tenant-api   | `AuditAndAdjustmentIntegrationTest`    | Integración (Testcontainers) | STAFF → 403; ajustes en la bitácora con autor y motivo; saldo = ledger; bitácora aislada por tenant |
 | platform-api | `CustomUserDetailsServiceTest`         | Unitaria                   | Solo PLATFORM_ADMIN sin tenant puede autenticarse                          |
 
-`ReportTenantIsolationIntegrationTest` levanta un PostgreSQL 16 desechable en Docker (requiere
-Docker Desktop encendido), aplica las migraciones reales y usa los tenants que siembra el seeder.
+Las pruebas de integración con Testcontainers comparten un PostgreSQL 16 desechable en Docker
+(requiere Docker Desktop encendido), aplican las migraciones reales y usan los tenants que siembra el seeder.
 
 Las pruebas de integración más antiguas (`SifiproBackendApplicationTests`,
 `RedemptionConcurrencyIntegrationTest` y las de platform-api `AuthControllerIntegrationTest`,
@@ -501,6 +523,8 @@ Todos los endpoints protegidos (en ambos servicios) requieren un token JWT en el
 | Compras y ledger     | `/api/transactions`   | ADMIN, STAFF (consultar y registrar)                               |
 | Canjes               | `/api/redemptions`    | ADMIN, STAFF (consultar, registrar y saldo por programa)           |
 | Reportes             | `/api/reports`        | ADMIN, STAFF (solo lectura)                                        |
+| Ajustes de puntos    | `/api/customers/{id}/adjustments` | ADMIN                                                  |
+| Bitácora de auditoría | `/api/audit`         | ADMIN                                                              |
 | Usuarios internos    | `/api/users`          | ADMIN                                                              |
 | Health check         | `/api/health`, `/actuator/health` | Público                                                |
 
@@ -541,6 +565,7 @@ con `ddl-auto=validate`:
 | V1      | `V1__baseline_schema.sql`           | Esquema base (tablas, índices y FKs) tal como existía antes de Flyway    |
 | V2      | `V2__platform_operator_support.sql` | `tenant_id` nullable y rol `PLATFORM_ADMIN` en `app_users`               |
 | V3      | `V3__integrity_constraints.sql`     | Email de cliente único por tenant (elimina el UNIQUE global); CHECK de stock ≥ 0, saldo ≥ 0, monto > 0, puntos por dólar > 0, compra mínima ≥ 0, puntos requeridos > 0 y coherencia rol/tenant; FK de `created_by`; índices por `customer_id` |
+| V4      | `V4__points_adjustments_and_audit.sql` | Columna `reason` en `points_movements` (obligatoria en ajustes, CHECK ≥ 5 caracteres); `reference_id` opcional solo para ajustes; índice `(tenant_id, created_at)` para la bitácora |
 
 Nunca se editan migraciones existentes: cada cambio de esquema es una migración nueva.
 `docs/database/consultas-demo.sql` contiene consultas de solo lectura para la demo (saldo vs
@@ -555,7 +580,7 @@ ledger, compras por mes, aislamiento por tenant, constraints, historial de Flywa
 - La tabla `app_users` es compartida por ambos servicios: contiene los usuarios internos de cada
   tenant (`ADMIN`/`STAFF`, con `tenant_id` obligatorio) y los operadores de plataforma
   (`PLATFORM_ADMIN`, con `tenant_id` nulo); desde V3 la base de datos exige esa coherencia.
-- Los movimientos de puntos (acumulaciones y canjes) se registran en `points_movements`, que
+- Los movimientos de puntos (acumulaciones, canjes y ajustes) se registran en `points_movements`, que
   funciona como ledger **de solo inserción por diseño de la aplicación**: no existen endpoints ni
   servicios que lo modifiquen o borren. La base de datos no lo impide por sí misma (no hay
   triggers); el saldo de cada cliente se mantiene igual a la suma de su ledger.

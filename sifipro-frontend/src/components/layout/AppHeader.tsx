@@ -33,7 +33,7 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-500 dark:text-indigo-400">
-            SIFIPRO Admin
+            {isAdmin(user) ? "SIFIPRO Admin" : "SIFIPRO Staff"}
           </p>
           <h1 className="text-[1.125rem] font-semibold tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.25rem]">
             {activeItem?.label ?? "SIFIPRO"}

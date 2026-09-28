@@ -2,6 +2,7 @@ package com.puent.sifipro.redemption.controller;
 
 import java.util.List;
 import com.puent.sifipro.redemption.dto.CreateRedemptionRequest;
+import com.puent.sifipro.redemption.dto.ProgramPointsBalanceResponse;
 import com.puent.sifipro.redemption.dto.RedemptionResponse;
 import com.puent.sifipro.redemption.service.RedemptionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,6 +63,22 @@ public class RedemptionController {
             Authentication authentication) {
         List<RedemptionResponse> response = redemptionService.getRedemptionsByCustomerId(
                 customerId,
+                authentication.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/customer/{customerId}/program/{programConfigId}/balance")
+    @Operation(
+            summary = "Get customer points available in a program",
+            description = "Returns the points a customer can redeem in one loyalty program, computed from the points "
+                    + "ledger with the same rule the redemption endpoint validates against.")
+    public ResponseEntity<ProgramPointsBalanceResponse> getProgramPointsBalance(
+            @PathVariable Long customerId,
+            @PathVariable Long programConfigId,
+            Authentication authentication) {
+        ProgramPointsBalanceResponse response = redemptionService.getProgramPointsBalance(
+                customerId,
+                programConfigId,
                 authentication.getName());
         return ResponseEntity.ok(response);
     }

@@ -9,7 +9,9 @@ import {
   getTodayDateInputValue,
   toLocalDateTimePayload,
 } from "../../../lib/date-utils";
+import { extractErrorMessage } from "../../../lib/error-utils";
 import { formatPoints } from "../../../lib/formatters";
+import { getCustomerProgramBalance } from "../redemptions.service";
 import type {
   CreateRedemptionRequest,
   CustomerResponse,
@@ -29,6 +31,13 @@ type FormErrors = {
   customerId?: string;
   rewardId?: string;
   redemptionDate?: string;
+};
+
+type ProgramBalanceState = {
+  // "customerId:programConfigId" the result belongs to.
+  key: string;
+  availablePoints: number | null;
+  error: string | null;
 };
 
 
@@ -67,15 +76,18 @@ export function RedemptionFormModal({
   const redemptionDateFieldId = useId();
   const notesFieldId = useId();
 
-  const activeRewards = useMemo(
-    () => rewards.filter((r) => r.active),
+  // Only what tenant-api would accept: active customers, and active rewards with stock.
+  const activeCustomers = useMemo(
+    () => customers.filter((customer) => customer.active),
+    [customers],
+  );
+  const selectableRewards = useMemo(
+    () => rewards.filter((reward) => reward.active && reward.stock > 0),
     [rewards],
   );
-  const selectableRewards: RewardResponse[] = activeRewards.length > 0 ? activeRewards : rewards;
 
   const [values, setValues] = useState<RedemptionFormValues>(() => {
-    const defaultCustomer =
-      customers.find((c) => c.active) ?? customers[0] ?? null;
+    const defaultCustomer = activeCustomers[0] ?? null;
     const defaultReward = selectableRewards[0] ?? null;
 
     return {
@@ -87,7 +99,7 @@ export function RedemptionFormModal({
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const hasCustomers = customers.length > 0;
+  const hasCustomers = activeCustomers.length > 0;
   const hasRewards = selectableRewards.length > 0;
 
   useEffect(() => {
@@ -109,6 +121,63 @@ export function RedemptionFormModal({
     if (!Number.isFinite(rewardId) || rewardId === 0) return null;
     return selectableRewards.find((r) => r.id === rewardId) ?? null;
   }, [values.rewardId, selectableRewards]);
+
+  const selectedCustomer = useMemo(
+    () =>
+      activeCustomers.find((customer) => String(customer.id) === values.customerId) ??
+      null,
+    [activeCustomers, values.customerId],
+  );
+
+  // Redemptions are validated against the balance earned in the reward's program,
+  // not the global balance, so that is the number shown here.
+  const balanceCustomerId = selectedCustomer?.id ?? null;
+  const balanceProgramId = selectedReward?.programConfigId ?? null;
+  const balanceKey =
+    balanceCustomerId !== null && balanceProgramId !== null
+      ? `${balanceCustomerId}:${balanceProgramId}`
+      : null;
+  const [balanceState, setBalanceState] = useState<ProgramBalanceState | null>(null);
+
+  useEffect(() => {
+    if (balanceKey === null || balanceCustomerId === null || balanceProgramId === null) {
+      return;
+    }
+
+    let isActive = true;
+
+    getCustomerProgramBalance(balanceCustomerId, balanceProgramId)
+      .then((balance) => {
+        if (isActive) {
+          setBalanceState({
+            key: balanceKey,
+            availablePoints: Number(balance.availablePoints),
+            error: null,
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setBalanceState({
+            key: balanceKey,
+            availablePoints: null,
+            error: extractErrorMessage(error, "Could not load the program balance."),
+          });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [balanceKey, balanceCustomerId, balanceProgramId]);
+
+  // Derived instead of stored, so a new selection shows "loading" immediately.
+  const currentBalance = balanceState?.key === balanceKey ? balanceState : null;
+  const isBalanceLoading = balanceKey !== null && currentBalance === null;
+  const hasInsufficientPoints =
+    selectedReward !== null &&
+    currentBalance?.availablePoints != null &&
+    currentBalance.availablePoints < Number(selectedReward.requiredPoints);
 
   const handleInputChange = (
     field: keyof RedemptionFormValues,
@@ -186,8 +255,8 @@ export function RedemptionFormModal({
         {!hasCustomers || !hasRewards ? (
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
             {!hasCustomers
-              ? "No customers available yet. Create a customer before registering redemptions."
-              : "No rewards available yet for the selected program. Create an active reward before registering redemptions."}
+              ? "No active customers available. Create or activate a customer before registering redemptions."
+              : "No redeemable rewards in the selected program. Rewards must be active and in stock."}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -206,7 +275,7 @@ export function RedemptionFormModal({
                 }
               >
                 <option value="">Select customer</option>
-                {customers.map((customer) => (
+                {activeCustomers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
                     {getCustomerLabel(customer)}
                   </option>
@@ -252,10 +321,33 @@ export function RedemptionFormModal({
                   <span className="font-medium">Stock:</span>{" "}
                   {selectedReward.stock}
                 </p>
-                <p className="mt-1 text-slate-700 dark:text-slate-200">
-                  <span className="font-medium">Active:</span>{" "}
-                  {selectedReward.active ? "Yes" : "No"}
-                </p>
+                {selectedCustomer ? (
+                  <p className="mt-1 text-slate-700 dark:text-slate-200">
+                    <span className="font-medium">Customer points in this program:</span>{" "}
+                    {isBalanceLoading
+                      ? "Loading..."
+                      : currentBalance?.availablePoints != null
+                        ? formatPoints(currentBalance.availablePoints)
+                        : "Unavailable"}
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {" "}
+                      (global balance: {formatPoints(selectedCustomer.pointsBalance)})
+                    </span>
+                  </p>
+                ) : null}
+                {currentBalance?.error ? (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {currentBalance.error}
+                  </p>
+                ) : null}
+                {hasInsufficientPoints ? (
+                  <p
+                    role="alert"
+                    className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400"
+                  >
+                    Not enough points in this program to redeem this reward.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -299,7 +391,7 @@ export function RedemptionFormModal({
               </button>
               <button
                 type="submit"
-                disabled={isSaving || !hasCustomers || !hasRewards}
+                disabled={isSaving || !hasCustomers || !hasRewards || hasInsufficientPoints}
                 className="rounded-lg border border-slate-300 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:border-slate-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-100 dark:text-slate-900 dark:hover:border-slate-500 dark:hover:bg-white"
               >
                 {isSaving ? "Saving..." : "Create Redemption"}

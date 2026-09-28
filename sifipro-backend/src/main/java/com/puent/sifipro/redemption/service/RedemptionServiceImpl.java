@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.Locale;
 import com.puent.sifipro.customer.entity.Customer;
 import com.puent.sifipro.customer.repository.CustomerRepository;
+import com.puent.sifipro.loyalty.entity.ProgramConfig;
+import com.puent.sifipro.loyalty.repository.ProgramConfigRepository;
 import com.puent.sifipro.redemption.dto.CreateRedemptionRequest;
+import com.puent.sifipro.redemption.dto.ProgramPointsBalanceResponse;
 import com.puent.sifipro.redemption.dto.RedemptionResponse;
 import com.puent.sifipro.redemption.entity.Redemption;
 import com.puent.sifipro.redemption.entity.RedemptionStatus;
@@ -33,18 +36,21 @@ public class RedemptionServiceImpl implements RedemptionService {
     private final RewardRepository rewardRepository;
     private final PointsMovementRepository pointsMovementRepository;
     private final AppUserRepository appUserRepository;
+    private final ProgramConfigRepository programConfigRepository;
 
     public RedemptionServiceImpl(
             RedemptionRepository redemptionRepository,
             CustomerRepository customerRepository,
             RewardRepository rewardRepository,
             PointsMovementRepository pointsMovementRepository,
-            AppUserRepository appUserRepository) {
+            AppUserRepository appUserRepository,
+            ProgramConfigRepository programConfigRepository) {
         this.redemptionRepository = redemptionRepository;
         this.customerRepository = customerRepository;
         this.rewardRepository = rewardRepository;
         this.pointsMovementRepository = pointsMovementRepository;
         this.appUserRepository = appUserRepository;
+        this.programConfigRepository = programConfigRepository;
     }
 
     @Override
@@ -133,6 +139,27 @@ public class RedemptionServiceImpl implements RedemptionService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProgramPointsBalanceResponse getProgramPointsBalance(
+            Long customerId,
+            Long programConfigId,
+            String currentUserEmail) {
+        AppUser currentUser = findAuthenticatedUser(currentUserEmail);
+        Long tenantId = currentUser.getTenant().getId();
+
+        customerRepository.findByIdAndTenantId(customerId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
+        ProgramConfig programConfig = programConfigRepository.findByIdAndTenantId(programConfigId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Program not found with id: " + programConfigId));
+
+        // Same calculation createRedemption validates against, so the UI shows exactly
+        // what the redemption rules will accept.
+        BigDecimal availablePoints = calculateProgramBalance(customerId, tenantId, programConfigId);
+        return new ProgramPointsBalanceResponse(
+                customerId, programConfig.getId(), programConfig.getProgramName(), availablePoints);
     }
 
     private void validateRedemptionRules(Customer customer, Reward reward, Long tenantId) {

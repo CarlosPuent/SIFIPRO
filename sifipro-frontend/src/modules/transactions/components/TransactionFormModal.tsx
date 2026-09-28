@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   DateField,
   FormField,
@@ -32,8 +32,7 @@ type FormErrors = {
 function getInitialFormValues(
   customers: CustomerResponse[],
 ): TransactionFormValues {
-  const defaultCustomer =
-    customers.find((customer) => customer.active) ?? customers[0] ?? null;
+  const defaultCustomer = customers[0] ?? null;
 
   return {
     customerId: defaultCustomer ? String(defaultCustomer.id) : "",
@@ -80,12 +79,18 @@ export function TransactionFormModal({
   const descriptionFieldId = useId();
   const transactionDateFieldId = useId();
 
+  // tenant-api rejects purchases for inactive customers, so only active ones are offered.
+  const activeCustomers = useMemo(
+    () => customers.filter((customer) => customer.active),
+    [customers],
+  );
+
   const [values, setValues] = useState<TransactionFormValues>(() =>
-    getInitialFormValues(customers),
+    getInitialFormValues(activeCustomers),
   );
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const hasCustomers = customers.length > 0;
+  const hasCustomers = activeCustomers.length > 0;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -176,8 +181,8 @@ export function TransactionFormModal({
 
         {!hasCustomers ? (
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-            No customers available yet. Create a customer before registering
-            transactions.
+            No active customers available. Create or activate a customer before
+            registering transactions.
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -196,7 +201,7 @@ export function TransactionFormModal({
                 }
               >
                 <option value="">Select customer</option>
-                {customers.map((customer) => (
+                {activeCustomers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
                     {getCustomerLabel(customer)}
                   </option>

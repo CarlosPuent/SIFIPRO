@@ -1,0 +1,11 @@
+# Archivos que se ejecutan dentro de contenedores Linux: siempre con finales de
+# línea LF, aunque el repositorio se clone en Windows con core.autocrlf=true.
+mvnw                                    text eol=lf
+*.sh                                    text eol=lf
+maven-wrapper.properties                text eol=lf
+Dockerfile                              text eol=lf
+nginx.conf                              text eol=lf
+docker-compose.yml                      text eol=lf
+
+# Scripts de Windows
+*.cmd                                   text eol=crlf

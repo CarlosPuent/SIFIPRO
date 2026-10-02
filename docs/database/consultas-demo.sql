@@ -2,7 +2,7 @@
 -- SIFIPRO — Consultas de demostración (PostgreSQL 16, base sifipro_db)
 --
 -- Uso (desde la raíz del repo, con los contenedores arriba):
---   docker exec -it sifipro-db sh -c 'psql -U "$POSTGRES_USER" -d sifipro_db'
+--   docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d sifipro_db'
 --   y pegar la consulta deseada. Todas son de solo lectura (SELECT).
 --
 -- Datos esperados tras un sembrado limpio (docker compose down -v && up):

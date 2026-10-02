@@ -1,9 +1,11 @@
-version: '3.8'
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  SIFIPRO – Sistema de Fidelización Profesional
-#  Uso: docker compose up --build
-#  Acceso: http://localhost:5173
+#  Uso: docker compose up --build -d   (instrucciones completas en README.md)
+#  Acceso: http://localhost:5173 (comercio) y http://localhost:5174 (plataforma)
+#
+#  Sin container_name ni nombre fijo de volumen: Compose antepone el nombre de la
+#  carpeta del proyecto, así dos copias del repositorio no comparten contenedores
+#  ni datos.
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -11,7 +13,6 @@ services:
   # ── PostgreSQL ──────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
-    container_name: sifipro-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: sifipro_db
@@ -20,7 +21,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sifipro -d sifipro_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d sifipro_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,7 +34,6 @@ services:
     build:
       context: ./sifipro-backend
       dockerfile: Dockerfile
-    container_name: sifipro-backend
     restart: unless-stopped
     ports:
       - "8085:8081"   # expuesto solo para debug/Swagger, no lo usa el frontend
@@ -54,7 +54,6 @@ services:
     build:
       context: ./sifipro-platform-api
       dockerfile: Dockerfile
-    container_name: sifipro-platform-api
     restart: unless-stopped
     ports:
       - "8086:8082"   # expuesto solo para debug, no lo usa platform-ui
@@ -81,7 +80,6 @@ services:
         # nginx los intercepta y los proxea internamente al container backend.
         # Mismo comportamiento que el proxy de Vite en desarrollo.
         VITE_API_BASE_URL: ""
-    container_name: sifipro-frontend
     restart: unless-stopped
     ports:
       - "5173:80"
@@ -99,7 +97,6 @@ services:
         # String vacío: platform-ui hace requests relativos (/api/...)
         # nginx los intercepta y los proxea internamente al container platform-api.
         VITE_API_BASE_URL: ""
-    container_name: sifipro-platform-ui
     restart: unless-stopped
     ports:
       - "5174:80"
@@ -110,7 +107,6 @@ services:
 
 volumes:
   pgdata:
-    name: sifipro-pgdata
 
 networks:
   sifipro-net:

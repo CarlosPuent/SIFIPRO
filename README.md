@@ -89,7 +89,7 @@ los contenedores.
 |---|---|
 | Docker Desktop | [Descargar Docker Desktop](https://www.docker.com/products/docker-desktop/). En Windows usa el motor **WSL 2** (el instalador lo propone por defecto; requiere la virtualización activada en la BIOS). |
 | Git | [Descargar Git](https://git-scm.com/downloads). En Windows incluye Git Bash. |
-| Memoria | 8 GB de RAM en el equipo (los cinco contenedores usan alrededor de 1.5 GB). |
+| Memoria | 8 GB de RAM en el equipo. Los cinco contenedores usan menos de 1 GB; Docker Desktop requiere memoria adicional. |
 | Disco | Unos 5 GB libres para imágenes y caché de compilación. |
 | Puertos libres | **5173, 5174, 8085 y 8086**. |
 | Internet | Solo en el primer arranque, para descargar imágenes y dependencias. |

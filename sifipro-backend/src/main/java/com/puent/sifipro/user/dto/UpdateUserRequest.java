@@ -26,7 +26,7 @@ public class UpdateUserRequest {
     @Size(max = 150, message = "Email must not exceed 150 characters")
     private String email;
 
-    @Schema(description = "Assigned role.", example = "STAFF")
+    @Schema(description = "Assigned role. Only ADMIN and STAFF are accepted; PLATFORM_ADMIN is rejected with 400.", example = "STAFF", allowableValues = {"ADMIN", "STAFF"})
     @NotNull(message = "Role is required")
     private UserRole role;
 

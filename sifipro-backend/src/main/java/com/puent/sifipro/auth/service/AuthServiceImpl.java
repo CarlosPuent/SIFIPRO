@@ -62,6 +62,11 @@ public class AuthServiceImpl implements AuthService {
         if (user.getTenant() == null) {
             throw new BusinessException("User account is not associated with a tenant.");
         }
+        // Checked only after the password is verified, so a suspended tenant is never
+        // revealed to someone who merely knows an email.
+        if (!Boolean.TRUE.equals(user.getTenant().getActive())) {
+            throw new BusinessException("Tenant account is suspended.");
+        }
 
         String token = jwtService.generateToken(user);
         return toAuthResponse(user, token);

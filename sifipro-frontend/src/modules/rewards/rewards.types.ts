@@ -18,6 +18,7 @@ export interface CreateRewardRequest {
   description?: string;
   requiredPoints: number | string;
   stock: number;
+  imageUrl?: string;
 }
 
 export interface UpdateRewardRequest {
@@ -26,6 +27,7 @@ export interface UpdateRewardRequest {
   description?: string;
   requiredPoints: number | string;
   stock: number;
+  imageUrl?: string;
 }
 
 export type RewardFormSubmitPayload = {
@@ -33,6 +35,7 @@ export type RewardFormSubmitPayload = {
   description?: string;
   requiredPoints: number | string;
   stock: number;
+  imageUrl: string;
 };
 
 export type RewardFormValues = {
@@ -40,4 +43,5 @@ export type RewardFormValues = {
   description: string;
   requiredPoints: string;
   stock: string;
+  imageUrl: string;
 };

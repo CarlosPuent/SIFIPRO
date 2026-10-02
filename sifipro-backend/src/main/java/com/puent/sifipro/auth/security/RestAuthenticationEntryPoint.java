@@ -28,12 +28,27 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
             HttpServletRequest request,
             HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
+        // details[0] carries a machine-readable reason the frontend uses to explain the logout.
+        Object rejectionReason = request.getAttribute(JwtAuthenticationFilter.REJECTION_REASON_ATTRIBUTE);
+        String message;
+        List<String> details;
+        if (JwtAuthenticationFilter.REASON_TENANT_SUSPENDED.equals(rejectionReason)) {
+            message = "Tenant account is suspended.";
+            details = List.of(JwtAuthenticationFilter.REASON_TENANT_SUSPENDED);
+        } else if (JwtAuthenticationFilter.REASON_USER_INACTIVE.equals(rejectionReason)) {
+            message = "User account is inactive.";
+            details = List.of(JwtAuthenticationFilter.REASON_USER_INACTIVE);
+        } else {
+            message = "Authentication is required to access this resource.";
+            details = List.of("Provide a valid Bearer token.");
+        }
+
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "Authentication is required to access this resource.",
-                List.of("Provide a valid Bearer token."));
+                message,
+                details);
 
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

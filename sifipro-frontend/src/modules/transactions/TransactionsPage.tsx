@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { useProgram } from "../program-config/ProgramContext";
+import { useProgram } from "../program-config/useProgram";
 import { PointsMovementsTable } from "./components/PointsMovementsTable";
 import { TransactionFormModal } from "./components/TransactionFormModal";
 import { TransactionsTable } from "./components/TransactionsTable";
@@ -113,7 +113,7 @@ function TransactionsProgramSelectionState({
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         {isLoadingPrograms
           ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program from the header to register transactions and inspect points movements."}
+          : "Select a program on the Dashboard to register transactions and inspect points movements."}
       </p>
       {programsError ? (
         <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">
@@ -164,18 +164,52 @@ export function TransactionsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!currentProgramId) {
+  // When the selected program changes, reset the page state during render
+  // (React's "adjusting state when a prop changes" pattern); the effect below
+  // only applies the async result. Refreshes go through loadProgramData().
+  const [syncedProgramId, setSyncedProgramId] = useState<number | null | undefined>(undefined);
+  if (syncedProgramId !== currentProgramId) {
+    setSyncedProgramId(currentProgramId);
+    setLoadError(null);
+    if (currentProgramId === null) {
       setTransactions([]);
       setPointsMovements([]);
-      setLoadError(null);
       setIsLoading(false);
       setIsModalOpen(false);
+    } else {
+      setIsLoading(true);
+    }
+  }
+
+  useEffect(() => {
+    if (currentProgramId === null) {
       return;
     }
 
-    void loadProgramData(currentProgramId);
-  }, [currentProgramId, loadProgramData]);
+    let isActive = true;
+
+    Promise.all([
+      getTransactionsByProgram(currentProgramId),
+      getPointsMovementsByProgram(currentProgramId),
+      getCustomers(),
+    ])
+      .then(([transactionsData, pointsMovementsData, customersData]) => {
+        if (!isActive) return;
+        setTransactions(transactionsData);
+        setPointsMovements(pointsMovementsData);
+        setCustomers(customersData);
+      })
+      .catch((error: unknown) => {
+        if (isActive) setLoadError(extractErrorMessage(error));
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentProgramId]);
 
   const handleOpenCreateModal = () => {
     if (!currentProgramId) {
@@ -239,7 +273,7 @@ export function TransactionsPage() {
           </h1>
           <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
             Transactions and points movements are managed per program. Select a
-            program from the header to continue.
+            program on the Dashboard to continue.
           </p>
         </header>
 

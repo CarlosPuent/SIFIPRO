@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -8,32 +7,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useIsDark } from "../../../lib/useIsDark";
 import type { DashboardTransactionResponse } from "../dashboard.types";
 
 type ActivityChartProps = {
   transactions: DashboardTransactionResponse[];
 };
-
-function useIsDark(): boolean {
-  const [isDark, setIsDark] = useState(() =>
-    document.documentElement.classList.contains("dark"),
-  );
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  return isDark;
-}
 
 function abbreviateName(fullName: string): string {
   const parts = fullName.trim().split(" ");

@@ -2,6 +2,7 @@ import { apiClient } from "../../lib/api-client";
 import type {
   CreateRedemptionRequest,
   CustomerResponse,
+  ProgramPointsBalanceResponse,
   RedemptionResponse,
   RewardResponse,
 } from "./redemptions.types";
@@ -53,4 +54,16 @@ export async function getRewardsByProgram(
   );
 
   return Array.isArray(response.data) ? response.data : [];
+}
+
+// Points the customer can redeem in one program (the value tenant-api validates
+// redemptions against), which can differ from the global pointsBalance.
+export async function getCustomerProgramBalance(
+  customerId: number,
+  programConfigId: number,
+): Promise<ProgramPointsBalanceResponse> {
+  const response = await apiClient.get<ProgramPointsBalanceResponse>(
+    `/api/redemptions/customer/${customerId}/program/${programConfigId}/balance`,
+  );
+  return response.data;
 }

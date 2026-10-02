@@ -1,8 +1,9 @@
 import axios from "axios";
 import { Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { defaultRoute } from "../../app/router/routes";
+import { clearAuthNotice, readAuthNotice } from "../../auth/auth.service";
 import { useAuth } from "../../auth/useAuth";
 import { Button } from "../../components/ui/Button";
 import { ThemeToggle } from "../../components/ui/ThemeToggle";
@@ -49,6 +50,14 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Set when the previous session was ended by the server (suspended tenant,
+  // deactivated user). Read in the initializer (idempotent under StrictMode) and
+  // cleared after mount, so a page refresh no longer shows it.
+  const [sessionNotice] = useState<string | null>(() => readAuthNotice());
+
+  useEffect(() => {
+    clearAuthNotice();
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
 
@@ -200,6 +209,20 @@ export function LoginPage() {
                   required
                 />
               </FormField>
+
+              {sessionNotice && !errorMessage ? (
+                <div
+                  role="status"
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm dark:border-amber-800/60 dark:bg-amber-950/30"
+                >
+                  <p className="font-semibold text-amber-800 dark:text-amber-300">
+                    Session ended
+                  </p>
+                  <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                    {sessionNotice}
+                  </p>
+                </div>
+              ) : null}
 
               {errorMessage ? (
                 <div

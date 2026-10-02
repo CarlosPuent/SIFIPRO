@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/Button";
 import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
-import { useProgram } from "../program-config/ProgramContext";
+import { useProgram } from "../program-config/useProgram";
 import { CustomerRedemptionsTable } from "./components/CustomerRedemptionsTable";
 import { RedemptionFormModal } from "./components/RedemptionFormModal";
 import { RedemptionsTable } from "./components/RedemptionsTable";
@@ -75,7 +75,7 @@ function RedemptionsProgramSelectionState({
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         {isLoadingPrograms
           ? "Please wait while we resolve available programs for this tenant."
-          : "Select a program from the header to register and review redemptions."}
+          : "Select a program on the Dashboard to register and review redemptions."}
       </p>
       {programsError ? (
         <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">
@@ -456,8 +456,8 @@ export function RedemptionsPage() {
             Redemptions
           </h1>
           <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300 sm:text-base">
-            Redemptions are managed per program. Select a program from the
-            header to continue.
+            Redemptions are managed per program. Select a program on the
+            Dashboard to continue.
           </p>
         </header>
 

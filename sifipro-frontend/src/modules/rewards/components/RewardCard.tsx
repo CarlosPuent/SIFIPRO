@@ -52,6 +52,8 @@ function StockBadge({ status, stock }: StockBadgeProps) {
 export type RewardCardProps = {
   reward: RewardResponse;
   isLoading: boolean;
+  // Edit/activate/deactivate are ADMIN-only in tenant-api (SecurityConfig).
+  canManage: boolean;
   onEdit: (reward: RewardResponse) => void;
   onToggleStatus: (reward: RewardResponse) => void;
 };
@@ -59,6 +61,7 @@ export type RewardCardProps = {
 export function RewardCard({
   reward,
   isLoading,
+  canManage,
   onEdit,
   onToggleStatus,
 }: RewardCardProps) {
@@ -182,6 +185,7 @@ export function RewardCard({
       </div>
 
       {/* ── Actions ───────────────────────────────── */}
+      {canManage ? (
       <div className="flex items-center gap-2 border-t border-slate-100/80 px-4 py-3 dark:border-slate-800/60">
         <Button
           variant="ghost"
@@ -202,6 +206,7 @@ export function RewardCard({
           {active ? "Deactivate" : "Activate"}
         </Button>
       </div>
+      ) : null}
     </article>
   );
 }

@@ -126,14 +126,21 @@ export function ProgramFormModal({
     [mode],
   );
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  // Re-initialise the form whenever the modal opens or its source data changes.
+  // Done during render (React's "adjusting state when a prop changes" pattern)
+  // instead of in an effect, so the form never renders stale values.
+  const [syncedWith, setSyncedWith] = useState({ open, mode, initialProgram });
+  if (
+    syncedWith.open !== open ||
+    syncedWith.mode !== mode ||
+    syncedWith.initialProgram !== initialProgram
+  ) {
+    setSyncedWith({ open, mode, initialProgram });
+    if (open) {
+      setValues(getInitialFormValues(initialProgram));
+      setErrors({});
     }
-
-    setValues(getInitialFormValues(initialProgram));
-    setErrors({});
-  }, [open, mode, initialProgram]);
+  }
 
   useEffect(() => {
     if (!open) {

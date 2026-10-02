@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.Locale;
 import com.puent.sifipro.customer.entity.Customer;
 import com.puent.sifipro.customer.repository.CustomerRepository;
+import com.puent.sifipro.loyalty.entity.ProgramConfig;
+import com.puent.sifipro.loyalty.repository.ProgramConfigRepository;
 import com.puent.sifipro.redemption.dto.CreateRedemptionRequest;
+import com.puent.sifipro.redemption.dto.ProgramPointsBalanceResponse;
 import com.puent.sifipro.redemption.dto.RedemptionResponse;
 import com.puent.sifipro.redemption.entity.Redemption;
 import com.puent.sifipro.redemption.entity.RedemptionStatus;
@@ -18,6 +21,7 @@ import com.puent.sifipro.shared.exception.ResourceNotFoundException;
 import com.puent.sifipro.transaction.entity.PointsMovement;
 import com.puent.sifipro.transaction.entity.PointsMovementType;
 import com.puent.sifipro.transaction.repository.PointsMovementRepository;
+import com.puent.sifipro.transaction.service.ProgramPointsBalanceCalculator;
 import com.puent.sifipro.user.entity.AppUser;
 import com.puent.sifipro.user.repository.AppUserRepository;
 import org.springframework.stereotype.Service;
@@ -33,18 +37,24 @@ public class RedemptionServiceImpl implements RedemptionService {
     private final RewardRepository rewardRepository;
     private final PointsMovementRepository pointsMovementRepository;
     private final AppUserRepository appUserRepository;
+    private final ProgramConfigRepository programConfigRepository;
+    private final ProgramPointsBalanceCalculator programPointsBalanceCalculator;
 
     public RedemptionServiceImpl(
             RedemptionRepository redemptionRepository,
             CustomerRepository customerRepository,
             RewardRepository rewardRepository,
             PointsMovementRepository pointsMovementRepository,
-            AppUserRepository appUserRepository) {
+            AppUserRepository appUserRepository,
+            ProgramConfigRepository programConfigRepository,
+            ProgramPointsBalanceCalculator programPointsBalanceCalculator) {
         this.redemptionRepository = redemptionRepository;
         this.customerRepository = customerRepository;
         this.rewardRepository = rewardRepository;
         this.pointsMovementRepository = pointsMovementRepository;
         this.appUserRepository = appUserRepository;
+        this.programConfigRepository = programConfigRepository;
+        this.programPointsBalanceCalculator = programPointsBalanceCalculator;
     }
 
     @Override
@@ -135,6 +145,27 @@ public class RedemptionServiceImpl implements RedemptionService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ProgramPointsBalanceResponse getProgramPointsBalance(
+            Long customerId,
+            Long programConfigId,
+            String currentUserEmail) {
+        AppUser currentUser = findAuthenticatedUser(currentUserEmail);
+        Long tenantId = currentUser.getTenant().getId();
+
+        customerRepository.findByIdAndTenantId(customerId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
+        ProgramConfig programConfig = programConfigRepository.findByIdAndTenantId(programConfigId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Program not found with id: " + programConfigId));
+
+        // Same calculation createRedemption validates against, so the UI shows exactly
+        // what the redemption rules will accept.
+        BigDecimal availablePoints = programPointsBalanceCalculator.calculate(customerId, tenantId, programConfigId);
+        return new ProgramPointsBalanceResponse(
+                customerId, programConfig.getId(), programConfig.getProgramName(), availablePoints);
+    }
+
     private void validateRedemptionRules(Customer customer, Reward reward, Long tenantId) {
         if (!Boolean.TRUE.equals(customer.getActive())) {
             throw new BusinessException("Customer is inactive.");
@@ -148,35 +179,13 @@ public class RedemptionServiceImpl implements RedemptionService {
             throw new BusinessException("Reward is out of stock.");
         }
 
-        BigDecimal customerProgramBalance = calculateProgramBalance(customer.getId(), tenantId,
+        BigDecimal customerProgramBalance = programPointsBalanceCalculator.calculate(customer.getId(), tenantId,
                 reward.getProgramConfig().getId());
         BigDecimal requiredPoints = reward.getRequiredPoints().setScale(4, RoundingMode.HALF_UP);
 
         if (customerProgramBalance.compareTo(requiredPoints) < 0) {
             throw new BusinessException("Insufficient points for this program.");
         }
-    }
-
-    private BigDecimal calculateProgramBalance(Long customerId, Long tenantId, Long programConfigId) {
-        BigDecimal balance = BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
-
-        List<PointsMovement> movements = pointsMovementRepository
-                .findAllByCustomerIdAndTenantIdAndProgramConfigIdOrderByIdAsc(customerId, tenantId, programConfigId);
-
-        for (PointsMovement movement : movements) {
-            BigDecimal movementPoints = movement.getPoints() == null
-                    ? BigDecimal.ZERO
-                    : movement.getPoints().setScale(4, RoundingMode.HALF_UP);
-
-            if (movement.getType() == PointsMovementType.REDEEM || movement.getType() == PointsMovementType.EXPIRE) {
-                balance = balance.add(movementPoints.abs().negate());
-                continue;
-            }
-
-            balance = balance.add(movementPoints);
-        }
-
-        return balance;
     }
 
     private AppUser findAuthenticatedUser(String currentUserEmail) {

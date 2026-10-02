@@ -5,61 +5,26 @@ import {
 } from "../../../lib/formatters";
 import type { CustomerProfileResponse } from "../customer-profile.types";
 
-type TierKey = "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
-
-const TIER_THRESHOLDS: {
-  key: TierKey;
-  label: string;
-  min: number;
-  nextThreshold: number | null;
-  nextLabel: string | null;
-}[] = [
-  {
-    key: "BRONZE",
-    label: "Bronze",
-    min: 0,
-    nextThreshold: 5000,
-    nextLabel: "Silver",
-  },
-  {
-    key: "SILVER",
-    label: "Silver",
-    min: 5000,
-    nextThreshold: 15000,
-    nextLabel: "Gold",
-  },
-  {
-    key: "GOLD",
-    label: "Gold",
-    min: 15000,
-    nextThreshold: 30000,
-    nextLabel: "Platinum",
-  },
-  {
-    key: "PLATINUM",
-    label: "Platinum",
-    min: 30000,
-    nextThreshold: null,
-    nextLabel: null,
-  },
-];
-
-const TIER_BADGE_STYLES: Record<TierKey, string> = {
+// Presentation only. Which tier a customer is in, the next tier, the points left and
+// the progress all come from the backend (CustomerTier.java via tierProgress);
+// nothing here computes tiers. GOLD is the highest tier.
+const TIER_BADGE_STYLES: Record<string, string> = {
   BRONZE:
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/50 dark:text-amber-300",
   SILVER:
     "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300",
   GOLD: "border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800/50 dark:bg-yellow-950/50 dark:text-yellow-300",
-  PLATINUM:
-    "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-800/50 dark:bg-violet-950/50 dark:text-violet-300",
 };
 
-const TIER_PROGRESS_COLORS: Record<TierKey, string> = {
+const TIER_PROGRESS_COLORS: Record<string, string> = {
   BRONZE: "from-amber-400 to-amber-500",
   SILVER: "from-slate-400 to-slate-500",
   GOLD: "from-yellow-400 to-amber-500",
-  PLATINUM: "from-violet-500 to-indigo-600",
 };
+
+const DEFAULT_BADGE_STYLE =
+  "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300";
+const DEFAULT_PROGRESS_COLOR = "from-slate-400 to-slate-500";
 
 function toNum(value: number | string | null | undefined): number {
   if (value === null || value === undefined) return 0;
@@ -67,26 +32,11 @@ function toNum(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function computeTierInfo(points: number) {
-  const tier =
-    TIER_THRESHOLDS.slice()
-      .reverse()
-      .find((t) => points >= t.min) ?? TIER_THRESHOLDS[0];
-
-  const progress =
-    tier.nextThreshold === null
-      ? 100
-      : Math.min(
-          100,
-          ((points - tier.min) / (tier.nextThreshold - tier.min)) * 100,
-        );
-
-  const pointsToNext =
-    tier.nextThreshold !== null
-      ? Math.max(0, tier.nextThreshold - points)
-      : null;
-
-  return { tier, progress, pointsToNext };
+// "GOLD" -> "Gold"
+function formatTierLabel(tier: string | null | undefined): string {
+  if (!tier) return "-";
+  const lower = tier.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 type CustomerProfileHeaderProps = {
@@ -98,16 +48,17 @@ export function CustomerProfileHeader({ profile }: CustomerProfileHeaderProps) {
   const initials =
     `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase();
 
-  const apiTierKey = (profile.tier?.toUpperCase() ?? "") as TierKey;
-  const tierKey: TierKey = TIER_THRESHOLDS.some((t) => t.key === apiTierKey)
-    ? apiTierKey
-    : computeTierInfo(points).tier.key;
+  const tierProgress = profile.tierProgress;
+  const tierKey = (tierProgress?.currentTier ?? profile.tier ?? "").toUpperCase();
+  const tierLabel = formatTierLabel(tierKey);
+  const nextTierLabel = tierProgress?.nextTier ? formatTierLabel(tierProgress.nextTier) : null;
+  const pointsToNext = toNum(tierProgress?.pointsToNextTier);
+  const pointsForNextTier =
+    tierProgress?.pointsForNextTier != null ? toNum(tierProgress.pointsForNextTier) : null;
+  const progress = Math.min(100, Math.max(0, toNum(tierProgress?.progressPercentage)));
 
-  const { tier, progress, pointsToNext } = computeTierInfo(points);
-  const resolvedTier = TIER_THRESHOLDS.find((t) => t.key === tierKey) ?? tier;
-
-  const badgeStyle = TIER_BADGE_STYLES[tierKey];
-  const progressColor = TIER_PROGRESS_COLORS[tierKey];
+  const badgeStyle = TIER_BADGE_STYLES[tierKey] ?? DEFAULT_BADGE_STYLE;
+  const progressColor = TIER_PROGRESS_COLORS[tierKey] ?? DEFAULT_PROGRESS_COLOR;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 shadow-sm backdrop-blur-sm transition-colors dark:border-slate-800/80 dark:bg-slate-900/75">
@@ -131,7 +82,7 @@ export function CustomerProfileHeader({ profile }: CustomerProfileHeaderProps) {
               <span
                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.08em] ${badgeStyle}`}
               >
-                {resolvedTier.label}
+                {tierLabel}
               </span>
               <span
                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
@@ -173,34 +124,34 @@ export function CustomerProfileHeader({ profile }: CustomerProfileHeaderProps) {
           </div>
         </div>
 
-        {/* Tier progress */}
+        {/* Tier progress (values from the backend's tierProgress) */}
         <div className="mt-6 border-t border-slate-200/80 pt-5 dark:border-slate-800/80">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                {resolvedTier.label} Tier
+                {tierLabel} Tier
               </span>
-              {resolvedTier.nextLabel ? (
+              {nextTierLabel ? (
                 <>
                   <span className="text-xs text-slate-300 dark:text-slate-600">
                     →
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {resolvedTier.nextLabel}
+                    {nextTierLabel}
                   </span>
                 </>
               ) : null}
             </div>
-            {pointsToNext !== null && resolvedTier.nextLabel ? (
+            {nextTierLabel ? (
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 <span className="font-semibold text-slate-700 dark:text-slate-200">
                   {formatNumber(pointsToNext, 0)} pts
                 </span>{" "}
-                to {resolvedTier.nextLabel}
+                to {nextTierLabel}
               </p>
             ) : (
-              <p className="text-xs font-semibold text-violet-600 dark:text-violet-400">
-                Maximum tier reached
+              <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">
+                Highest tier reached
               </p>
             )}
           </div>
@@ -212,16 +163,16 @@ export function CustomerProfileHeader({ profile }: CustomerProfileHeaderProps) {
             />
           </div>
 
-          {resolvedTier.nextThreshold !== null ? (
-            <div className="mt-1.5 flex justify-between">
+          <div className="mt-1.5 flex justify-between">
+            <span className="text-[11px] text-slate-400 dark:text-slate-600">
+              {formatNumber(progress, 0)}% of the way
+            </span>
+            {nextTierLabel && pointsForNextTier !== null ? (
               <span className="text-[11px] text-slate-400 dark:text-slate-600">
-                {formatNumber(resolvedTier.min, 0)}
+                {nextTierLabel} at {formatNumber(pointsForNextTier, 0)} pts
               </span>
-              <span className="text-[11px] text-slate-400 dark:text-slate-600">
-                {formatNumber(resolvedTier.nextThreshold, 0)}
-              </span>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

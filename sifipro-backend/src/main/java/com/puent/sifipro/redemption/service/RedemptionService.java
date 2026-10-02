@@ -2,6 +2,7 @@ package com.puent.sifipro.redemption.service;
 
 import java.util.List;
 import com.puent.sifipro.redemption.dto.CreateRedemptionRequest;
+import com.puent.sifipro.redemption.dto.ProgramPointsBalanceResponse;
 import com.puent.sifipro.redemption.dto.RedemptionResponse;
 
 public interface RedemptionService {
@@ -13,4 +14,6 @@ public interface RedemptionService {
     RedemptionResponse getRedemptionById(Long id, String currentUserEmail);
 
     List<RedemptionResponse> getRedemptionsByCustomerId(Long customerId, String currentUserEmail);
+
+    ProgramPointsBalanceResponse getProgramPointsBalance(Long customerId, Long programConfigId, String currentUserEmail);
 }

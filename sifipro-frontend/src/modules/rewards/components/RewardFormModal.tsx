@@ -22,7 +22,11 @@ type FormErrors = {
   name?: string;
   requiredPoints?: string;
   stock?: string;
+  imageUrl?: string;
 };
+
+const IMAGE_URL_MAX_LENGTH = 500;
+const IMAGE_URL_PATTERN = /^https?:\/\/\S+$/i;
 
 function getInitialFormValues(reward: RewardResponse | null): RewardFormValues {
   if (!reward) {
@@ -31,6 +35,7 @@ function getInitialFormValues(reward: RewardResponse | null): RewardFormValues {
       description: "",
       requiredPoints: "",
       stock: "0",
+      imageUrl: "",
     };
   }
 
@@ -39,6 +44,7 @@ function getInitialFormValues(reward: RewardResponse | null): RewardFormValues {
     description: reward.description ?? "",
     requiredPoints: String(reward.requiredPoints),
     stock: String(reward.stock),
+    imageUrl: reward.imageUrl ?? "",
   };
 }
 
@@ -63,6 +69,13 @@ function validate(values: RewardFormValues): FormErrors {
     errors.stock = "Stock must be zero or a positive number.";
   }
 
+  const imageUrl = values.imageUrl.trim();
+  if (imageUrl.length > IMAGE_URL_MAX_LENGTH) {
+    errors.imageUrl = `Image URL must not exceed ${IMAGE_URL_MAX_LENGTH} characters.`;
+  } else if (imageUrl && !IMAGE_URL_PATTERN.test(imageUrl)) {
+    errors.imageUrl = "Image URL must start with http:// or https://.";
+  }
+
   return errors;
 }
 
@@ -80,6 +93,7 @@ export function RewardFormModal({
   const descriptionFieldId = useId();
   const requiredPointsFieldId = useId();
   const stockFieldId = useId();
+  const imageUrlFieldId = useId();
 
   const [values, setValues] = useState<RewardFormValues>(() =>
     getInitialFormValues(initialReward),
@@ -91,14 +105,21 @@ export function RewardFormModal({
     [mode],
   );
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  // Re-initialise the form whenever the modal opens or its source reward changes.
+  // Done during render (React's "adjusting state when a prop changes" pattern)
+  // instead of in an effect, so the form never renders stale values.
+  const [syncedWith, setSyncedWith] = useState({ open, mode, initialReward });
+  if (
+    syncedWith.open !== open ||
+    syncedWith.mode !== mode ||
+    syncedWith.initialReward !== initialReward
+  ) {
+    setSyncedWith({ open, mode, initialReward });
+    if (open) {
+      setValues(getInitialFormValues(initialReward));
+      setErrors({});
     }
-
-    setValues(getInitialFormValues(initialReward));
-    setErrors({});
-  }, [open, mode, initialReward]);
+  }
 
   useEffect(() => {
     if (!open) {
@@ -121,6 +142,9 @@ export function RewardFormModal({
   if (!open) {
     return null;
   }
+
+  const trimmedImageUrl = values.imageUrl.trim();
+  const previewUrl = IMAGE_URL_PATTERN.test(trimmedImageUrl) ? trimmedImageUrl : null;
 
   const handleInputChange = (field: keyof RewardFormValues, value: string) => {
     setValues((current) => ({
@@ -148,6 +172,9 @@ export function RewardFormModal({
       description: values.description.trim() || undefined,
       requiredPoints: Number(values.requiredPoints),
       stock: Number(values.stock),
+      // Always sent (also on edit) so saving never wipes an existing image; an
+      // empty string clears it on purpose (the backend stores it as null).
+      imageUrl: values.imageUrl.trim(),
     };
 
     await onSubmit(payload);
@@ -268,6 +295,43 @@ export function RewardFormModal({
                 />
               </FormField>
             </div>
+
+            <FormField
+              label="Image URL"
+              htmlFor={imageUrlFieldId}
+              error={errors.imageUrl}
+              hint={errors.imageUrl ? undefined : "Optional. Public http(s) link to the reward image."}
+            >
+              <TextInput
+                id={imageUrlFieldId}
+                type="url"
+                value={values.imageUrl}
+                disabled={isSaving}
+                error={Boolean(errors.imageUrl)}
+                placeholder="https://example.com/reward.jpg"
+                onChange={(event) =>
+                  handleInputChange("imageUrl", event.target.value)
+                }
+              />
+            </FormField>
+
+            {previewUrl ? (
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
+                {/* key: remount on URL change so a previous load error doesn't stick */}
+                <img
+                  key={previewUrl}
+                  src={previewUrl}
+                  alt="Reward image preview"
+                  className="h-36 w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+                <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+                  Preview (hidden if the image cannot be loaded)
+                </p>
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button

@@ -63,7 +63,11 @@ public class SecurityConfig {
                                                 // STAFF needs program read access to bootstrap the app context.
                                                 .requestMatchers(HttpMethod.GET, "/api/program-config/**")
                                                 .hasAnyRole("ADMIN", "STAFF")
-                                                .requestMatchers("/api/users/**", "/api/program-config/**")
+                                                .requestMatchers("/api/users/**", "/api/program-config/**", "/api/audit/**")
+                                                .hasRole("ADMIN")
+                                                // Manual points adjustments are ADMIN-only; must precede the
+                                                // POST /api/customers/** rule that also admits STAFF.
+                                                .requestMatchers(HttpMethod.POST, "/api/customers/*/adjustments")
                                                 .hasRole("ADMIN")
                                                 // STAFF gets read access and limited operational writes.
                                                 .requestMatchers(
@@ -71,7 +75,8 @@ public class SecurityConfig {
                                                                 "/api/customers/**",
                                                                 "/api/rewards/**",
                                                                 "/api/transactions/**",
-                                                                "/api/redemptions/**")
+                                                                "/api/redemptions/**",
+                                                                "/api/reports/**")
                                                 .hasAnyRole("ADMIN", "STAFF")
                                                 .requestMatchers(
                                                                 HttpMethod.POST,

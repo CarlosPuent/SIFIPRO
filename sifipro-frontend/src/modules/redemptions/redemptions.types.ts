@@ -41,6 +41,14 @@ export interface RewardResponse {
   updatedAt: string;
 }
 
+// GET /api/redemptions/customer/{customerId}/program/{programConfigId}/balance
+export interface ProgramPointsBalanceResponse {
+  customerId: number;
+  programConfigId: number;
+  programName: string;
+  availablePoints: number | string;
+}
+
 export interface CreateRedemptionRequest {
   customerId: number;
   rewardId: number;

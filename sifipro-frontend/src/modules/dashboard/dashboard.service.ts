@@ -1,105 +1,60 @@
-import { apiClient } from '../../lib/api-client';
-import type {
-  DashboardOperationalData,
-  DashboardRedemptionResponse,
-  DashboardRewardResponse,
-  DashboardScopeSummary,
-  DashboardTransactionResponse,
-} from './dashboard.types';
+import {
+  getRecentActivity,
+  getReportSummary,
+  getStockAlerts,
+} from '../reports/reports.service';
+import type { DashboardOperationalData } from './dashboard.types';
 
 const LOW_STOCK_THRESHOLD = 5;
+const RECENT_ITEMS = 5;
 
-function getComparableTimestamp(dateValue: string | undefined): number {
-  if (!dateValue) {
-    return 0;
-  }
-
-  const parsed = new Date(dateValue).getTime();
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
-type CustomerDashboardResponse = {
-  active: boolean;
-};
-
-function filterProgramRedemptions(
-  redemptions: DashboardRedemptionResponse[],
-  programConfigId: number,
-): DashboardRedemptionResponse[] {
-  return redemptions.filter(
-    (redemption) => redemption.programConfigId === programConfigId,
-  );
-}
-
-function buildDashboardSummary(
-  customers: CustomerDashboardResponse[],
-  rewards: DashboardRewardResponse[],
-  transactions: DashboardTransactionResponse[],
-  redemptions: DashboardRedemptionResponse[],
-): DashboardScopeSummary {
-  return {
-    tenantCustomers: customers.length,
-    tenantActiveCustomers: customers.filter((customer) => customer.active)
-      .length,
-    programRewards: rewards.length,
-    programActiveRewards: rewards.filter((reward) => reward.active).length,
-    programTransactions: transactions.length,
-    programRedemptions: redemptions.length,
-  };
-}
-
+// The Dashboard reads aggregated, tenant-scoped figures from tenant-api's report
+// endpoints (whole history, no date range) instead of downloading every customer,
+// transaction and redemption and counting them in the browser. The results are
+// mapped onto the Dashboard's existing view types, so its components are unchanged.
 export async function fetchOperationalDashboardData(
   programConfigId: number,
 ): Promise<DashboardOperationalData> {
-  const [customersResponse, transactionsResponse, redemptionsResponse, rewardsResponse] =
-    await Promise.all([
-      apiClient.get<CustomerDashboardResponse[]>('/api/customers'),
-      apiClient.get<DashboardTransactionResponse[]>(
-        `/api/transactions/program/${programConfigId}`,
-      ),
-      apiClient.get<DashboardRedemptionResponse[]>('/api/redemptions'),
-      apiClient.get<DashboardRewardResponse[]>(
-        `/api/rewards/programs/${programConfigId}`,
-      ),
-    ]);
-
-  const customers = Array.isArray(customersResponse.data)
-    ? customersResponse.data
-    : [];
-
-  const transactions = Array.isArray(transactionsResponse.data)
-    ? transactionsResponse.data
-    : [];
-  const redemptions = Array.isArray(redemptionsResponse.data)
-    ? filterProgramRedemptions(redemptionsResponse.data, programConfigId)
-    : [];
-  const rewards = Array.isArray(rewardsResponse.data) ? rewardsResponse.data : [];
-
-  const recentTransactions = [...transactions]
-    .sort(
-      (a, b) =>
-        getComparableTimestamp(b.transactionDate ?? b.createdAt) -
-        getComparableTimestamp(a.transactionDate ?? a.createdAt),
-    )
-    .slice(0, 5);
-
-  const recentRedemptions = [...redemptions]
-    .sort(
-      (a, b) =>
-        getComparableTimestamp(b.redemptionDate ?? b.createdAt) -
-        getComparableTimestamp(a.redemptionDate ?? a.createdAt),
-    )
-    .slice(0, 5);
-
-  const lowStockRewards = rewards
-    .filter((reward) => reward.active && reward.stock <= LOW_STOCK_THRESHOLD)
-    .sort((a, b) => a.stock - b.stock)
-    .slice(0, 5);
+  const [summary, activity, stockAlerts] = await Promise.all([
+    getReportSummary(programConfigId),
+    getRecentActivity(programConfigId, RECENT_ITEMS),
+    getStockAlerts(programConfigId, LOW_STOCK_THRESHOLD, RECENT_ITEMS),
+  ]);
 
   return {
-    summary: buildDashboardSummary(customers, rewards, transactions, redemptions),
-    recentTransactions,
-    recentRedemptions,
-    lowStockRewards,
+    summary: {
+      tenantCustomers: summary.totalCustomers,
+      tenantActiveCustomers: summary.activeCustomers,
+      programRewards: summary.programRewards,
+      programActiveRewards: summary.programActiveRewards,
+      programTransactions: summary.purchases,
+      programRedemptions: summary.redemptions,
+    },
+    recentTransactions: activity.transactions.map((transaction) => ({
+      id: transaction.id,
+      programConfigId,
+      customerFullName: transaction.customerFullName,
+      amount: transaction.amount,
+      transactionDate: transaction.transactionDate,
+      pointsEarned: transaction.pointsEarned,
+      createdAt: transaction.transactionDate,
+    })),
+    recentRedemptions: activity.redemptions.map((redemption) => ({
+      id: redemption.id,
+      programConfigId,
+      customerFullName: redemption.customerFullName,
+      rewardName: redemption.rewardName,
+      redemptionDate: redemption.redemptionDate,
+      pointsUsed: redemption.pointsUsed,
+      createdAt: redemption.redemptionDate,
+    })),
+    lowStockRewards: stockAlerts.map((reward) => ({
+      id: reward.id,
+      programConfigId,
+      name: reward.name,
+      requiredPoints: reward.requiredPoints,
+      stock: reward.stock,
+      active: true,
+    })),
   };
 }

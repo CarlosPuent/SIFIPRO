@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Gift,
+  History,
   LayoutDashboard,
   Settings2,
   Shield,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { appNavigation } from "../../app/router/routes";
-import { userHasAnyRole } from "../../auth/role-utils";
+import { isAdmin, userHasAnyRole } from "../../auth/role-utils";
 import { useAuth } from "../../auth/useAuth";
 
 const navIcons: Record<string, LucideIcon> = {
@@ -24,6 +25,7 @@ const navIcons: Record<string, LucideIcon> = {
   "/reports": BarChart3,
   "/users": Shield,
   "/program-config": Settings2,
+  "/audit": History,
 };
 
 const baseLinkClass =
@@ -50,7 +52,7 @@ export function Sidebar() {
             </p>
           </div>
           <h2 className="mt-4 text-[1.125rem] font-semibold tracking-tight text-slate-800 dark:text-slate-100">
-            Tenant Admin
+            {isAdmin(user) ? "Tenant Admin" : "Tenant Staff"}
           </h2>
           <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
             Multi-tenant operations

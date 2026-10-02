@@ -1,7 +1,9 @@
 package com.puent.sifipro.user.service;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import com.puent.sifipro.shared.exception.BusinessException;
 import com.puent.sifipro.shared.exception.ResourceNotFoundException;
 import com.puent.sifipro.user.dto.CreateUserRequest;
@@ -9,6 +11,7 @@ import com.puent.sifipro.user.dto.UpdateUserPasswordRequest;
 import com.puent.sifipro.user.dto.UpdateUserRequest;
 import com.puent.sifipro.user.dto.UserResponse;
 import com.puent.sifipro.user.entity.AppUser;
+import com.puent.sifipro.user.entity.UserRole;
 import com.puent.sifipro.user.repository.AppUserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    // Tenant user management may only hand out tenant roles. PLATFORM_ADMIN is owned by
+    // platform-api; allowing it here would let a tenant ADMIN escalate to the platform.
+    private static final Set<UserRole> ASSIGNABLE_ROLES = EnumSet.of(UserRole.ADMIN, UserRole.STAFF);
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
@@ -28,6 +35,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createUser(CreateUserRequest request, String currentUserEmail) {
+        validateAssignableRole(request.getRole());
+
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (appUserRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new BusinessException("A user with this email already exists.");
@@ -70,7 +79,17 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateUser(Long id, UpdateUserRequest request, String currentUserEmail) {
         AppUser currentUser = findAuthenticatedUser(currentUserEmail);
-        AppUser user = findUserByIdAndTenantId(id, currentUser.getTenant().getId());
+        Long tenantId = currentUser.getTenant().getId();
+        AppUser user = findUserByIdAndTenantId(id, tenantId);
+
+        validateAssignableRole(request.getRole());
+        boolean losesAdminRole = user.getRole() == UserRole.ADMIN && request.getRole() != UserRole.ADMIN;
+        if (losesAdminRole) {
+            if (user.getId().equals(currentUser.getId())) {
+                throw new BusinessException("You cannot remove the ADMIN role from your own account.");
+            }
+            ensureAnotherActiveAdminRemains(user, tenantId);
+        }
 
         String normalizedEmail = normalizeEmail(request.getEmail());
         boolean emailChanged = !user.getEmail().equalsIgnoreCase(normalizedEmail);
@@ -101,7 +120,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse deactivateUser(Long id, String currentUserEmail) {
         AppUser currentUser = findAuthenticatedUser(currentUserEmail);
-        AppUser user = findUserByIdAndTenantId(id, currentUser.getTenant().getId());
+        Long tenantId = currentUser.getTenant().getId();
+        AppUser user = findUserByIdAndTenantId(id, tenantId);
+
+        if (user.getId().equals(currentUser.getId())) {
+            throw new BusinessException("You cannot deactivate your own account.");
+        }
+        ensureAnotherActiveAdminRemains(user, tenantId);
+
         user.setActive(Boolean.FALSE);
         AppUser updatedUser = appUserRepository.save(user);
         return toResponse(updatedUser);
@@ -125,6 +151,21 @@ public class UserServiceImpl implements UserService {
         }
 
         return currentUser;
+    }
+
+    private void validateAssignableRole(UserRole role) {
+        if (role == null || !ASSIGNABLE_ROLES.contains(role)) {
+            throw new BusinessException("Role " + role + " cannot be assigned to tenant users. Allowed roles: ADMIN, STAFF.");
+        }
+    }
+
+    // Called before a change that would take `target` out of the active-ADMIN pool.
+    private void ensureAnotherActiveAdminRemains(AppUser target, Long tenantId) {
+        boolean targetIsActiveAdmin = target.getRole() == UserRole.ADMIN && Boolean.TRUE.equals(target.getActive());
+        if (targetIsActiveAdmin
+                && appUserRepository.countByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.ADMIN) <= 1) {
+            throw new BusinessException("The tenant must keep at least one active ADMIN.");
+        }
     }
 
     private AppUser findUserByIdAndTenantId(Long id, Long tenantId) {

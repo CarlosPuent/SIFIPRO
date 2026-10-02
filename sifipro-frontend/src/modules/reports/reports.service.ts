@@ -1,188 +1,141 @@
+import axios from "axios";
 import { apiClient } from "../../lib/api-client";
-import type { RedemptionResponse } from "../redemptions/redemptions.types";
 import type {
-  CustomerResponse,
-  PurchaseTransactionResponse,
-} from "../transactions/transactions.types";
-import type { RewardResponse } from "../rewards/rewards.types";
-import type {
+  RecentActivity,
+  ReportGranularity,
+  ReportRange,
   ReportsData,
-  ReportsScopeSummary,
-  TopCustomerResponse,
-  TopRedeemedRewardResponse,
+  ReportSummary,
+  ReportTimeSeriesPoint,
+  StockAlertEntry,
+  TierDistributionEntry,
+  TopCustomerReportEntry,
+  TopRewardReportEntry,
 } from "./reports.types";
 
-function toNumber(value: number | string | null | undefined): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
+// All aggregation happens in tenant-api (GET /api/reports/**), always scoped to the
+// authenticated user's tenant; the browser only renders the results.
 
-  if (typeof value === "string") {
-    const normalizedValue = value.replaceAll(",", "").trim();
-    const parsedValue = Number(normalizedValue);
-    return Number.isFinite(parsedValue) ? parsedValue : 0;
-  }
+type ScopeParams = {
+  programConfigId: number;
+  from?: string;
+  to?: string;
+};
 
-  return 0;
+function scopeParams(programConfigId: number, range?: ReportRange): ScopeParams {
+  return range ? { programConfigId, from: range.from, to: range.to } : { programConfigId };
 }
 
-function filterRedemptionsByProgram(
-  redemptions: RedemptionResponse[],
+export async function getReportSummary(
   programConfigId: number,
-): RedemptionResponse[] {
-  return redemptions.filter(
-    (redemption) => redemption.programConfigId === programConfigId,
-  );
+  range?: ReportRange,
+): Promise<ReportSummary> {
+  const response = await apiClient.get<ReportSummary>("/api/reports/summary", {
+    params: scopeParams(programConfigId, range),
+  });
+  return response.data;
 }
 
-function buildSummary(
-  customers: CustomerResponse[],
-  rewards: RewardResponse[],
-  transactions: PurchaseTransactionResponse[],
-  redemptions: RedemptionResponse[],
-): ReportsScopeSummary {
-  const totalPointsIssuedInProgram = transactions.reduce(
-    (sum, transaction) =>
-      sum +
-      toNumber(
-        transaction.awardedPoints ?? transaction.pointsEarned ?? 0,
-      ),
-    0,
-  );
-
-  const totalPointsRedeemedInProgram = redemptions.reduce(
-    (sum, redemption) => sum + toNumber(redemption.pointsUsed),
-    0,
-  );
-
-  return {
-    tenantCustomers: customers.length,
-    tenantActiveCustomers: customers.filter((customer) => customer.active)
-      .length,
-    programRewards: rewards.length,
-    programActiveRewards: rewards.filter((reward) => reward.active).length,
-    programTransactions: transactions.length,
-    programRedemptions: redemptions.length,
-    totalPointsIssuedInProgram,
-    totalPointsRedeemedInProgram,
-  };
+export async function getRecentActivity(
+  programConfigId: number,
+  limit: number,
+): Promise<RecentActivity> {
+  const response = await apiClient.get<RecentActivity>("/api/reports/recent-activity", {
+    params: { programConfigId, limit },
+  });
+  return response.data;
 }
 
-function buildTopCustomers(
-  customers: CustomerResponse[],
-  transactions: PurchaseTransactionResponse[],
-  redemptions: RedemptionResponse[],
-): TopCustomerResponse[] {
-  const transactionCounts = new Map<number, number>();
-  const redemptionCounts = new Map<number, number>();
-
-  for (const transaction of transactions) {
-    transactionCounts.set(
-      transaction.customerId,
-      (transactionCounts.get(transaction.customerId) ?? 0) + 1,
-    );
-  }
-
-  for (const redemption of redemptions) {
-    redemptionCounts.set(
-      redemption.customerId,
-      (redemptionCounts.get(redemption.customerId) ?? 0) + 1,
-    );
-  }
-
-  return customers
-    .map((customer) => ({
-      customerId: customer.id,
-      customerFullName: `${customer.firstName} ${customer.lastName}`.trim(),
-      email: customer.email,
-      pointsBalance: customer.pointsBalance,
-      active: customer.active,
-      transactionsCount: transactionCounts.get(customer.id) ?? 0,
-      redemptionsCount: redemptionCounts.get(customer.id) ?? 0,
-    }))
-    .filter(
-      (customer) =>
-        (customer.transactionsCount ?? 0) > 0 ||
-        (customer.redemptionsCount ?? 0) > 0,
-    )
-    .sort((left, right) => {
-      const activityDelta =
-        (right.transactionsCount ?? 0) +
-        (right.redemptionsCount ?? 0) -
-        ((left.transactionsCount ?? 0) + (left.redemptionsCount ?? 0));
-
-      if (activityDelta !== 0) {
-        return activityDelta;
-      }
-
-      return toNumber(right.pointsBalance) - toNumber(left.pointsBalance);
-    })
-    .slice(0, 10);
-}
-
-function buildTopRedeemedRewards(
-  rewards: RewardResponse[],
-  redemptions: RedemptionResponse[],
-): TopRedeemedRewardResponse[] {
-  const redemptionCounts = new Map<number, number>();
-  const rewardNames = new Map<number, string>();
-
-  for (const reward of rewards) {
-    rewardNames.set(reward.id, reward.name);
-  }
-
-  for (const redemption of redemptions) {
-    redemptionCounts.set(
-      redemption.rewardId,
-      (redemptionCounts.get(redemption.rewardId) ?? 0) + 1,
-    );
-
-    if (!rewardNames.has(redemption.rewardId)) {
-      rewardNames.set(redemption.rewardId, redemption.rewardName);
-    }
-  }
-
-  return Array.from(redemptionCounts.entries())
-    .map(([rewardId, totalRedemptions]) => ({
-      rewardId,
-      rewardName: rewardNames.get(rewardId) ?? `Reward #${rewardId}`,
-      totalRedemptions,
-    }))
-    .sort((left, right) => right.totalRedemptions - left.totalRedemptions)
-    .slice(0, 10);
+export async function getStockAlerts(
+  programConfigId: number,
+  threshold: number,
+  limit: number,
+): Promise<StockAlertEntry[]> {
+  const response = await apiClient.get<StockAlertEntry[]>("/api/reports/stock-alerts", {
+    params: { programConfigId, threshold, limit },
+  });
+  return response.data;
 }
 
 export async function getReportsData(
   programConfigId: number,
+  range: ReportRange,
+  granularity: ReportGranularity,
 ): Promise<ReportsData> {
-  const [customersResponse, transactionsResponse, redemptionsResponse, rewardsResponse] =
+  const params = scopeParams(programConfigId, range);
+
+  const [summary, timeSeries, topCustomers, topRewards, tierDistribution, stockAlerts] =
     await Promise.all([
-      apiClient.get<CustomerResponse[]>("/api/customers"),
-      apiClient.get<PurchaseTransactionResponse[]>(
-        `/api/transactions/program/${programConfigId}`,
-      ),
-      apiClient.get<RedemptionResponse[]>("/api/redemptions"),
-      apiClient.get<RewardResponse[]>(
-        `/api/rewards/programs/${programConfigId}`,
-      ),
+      getReportSummary(programConfigId, range),
+      apiClient.get<ReportTimeSeriesPoint[]>("/api/reports/timeseries", {
+        params: { ...params, granularity },
+      }),
+      apiClient.get<TopCustomerReportEntry[]>("/api/reports/top-customers", {
+        params: { ...params, limit: 10 },
+      }),
+      apiClient.get<TopRewardReportEntry[]>("/api/reports/top-rewards", {
+        params: { ...params, limit: 10 },
+      }),
+      apiClient.get<TierDistributionEntry[]>("/api/reports/tier-distribution"),
+      getStockAlerts(programConfigId, 5, 10),
     ]);
 
-  const customers = Array.isArray(customersResponse.data)
-    ? customersResponse.data
-    : [];
-  const transactions = Array.isArray(transactionsResponse.data)
-    ? transactionsResponse.data
-    : [];
-  const allRedemptions = Array.isArray(redemptionsResponse.data)
-    ? redemptionsResponse.data
-    : [];
-  const rewards = Array.isArray(rewardsResponse.data) ? rewardsResponse.data : [];
-
-  const redemptions = filterRedemptionsByProgram(allRedemptions, programConfigId);
-
   return {
-    summary: buildSummary(customers, rewards, transactions, redemptions),
-    topCustomers: buildTopCustomers(customers, transactions, redemptions),
-    topRedeemedRewards: buildTopRedeemedRewards(rewards, redemptions),
+    summary,
+    timeSeries: timeSeries.data,
+    topCustomers: topCustomers.data,
+    topRewards: topRewards.data,
+    tierDistribution: tierDistribution.data,
+    stockAlerts,
   };
+}
+
+export type CsvExportKind = "summary" | "purchases";
+
+function fileNameFromDisposition(header: unknown, fallback: string): string {
+  if (typeof header !== "string") return fallback;
+  const match = /filename="?([^";]+)"?/i.exec(header);
+  return match ? match[1] : fallback;
+}
+
+// With responseType "blob" an error body also arrives as a Blob; turn it back into
+// the API's JSON error so extractErrorMessage can show its message.
+async function unwrapBlobError(error: unknown): Promise<unknown> {
+  if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+    try {
+      error.response.data = JSON.parse(await error.response.data.text());
+    } catch {
+      // not JSON: keep the original error
+    }
+  }
+  return error;
+}
+
+/** Downloads a CSV export (same scope rules as the reports) and saves it as a file. */
+export async function downloadReportCsv(
+  kind: CsvExportKind,
+  programConfigId: number,
+  range: ReportRange,
+): Promise<void> {
+  try {
+    const response = await apiClient.get<Blob>(`/api/reports/export/${kind}.csv`, {
+      params: scopeParams(programConfigId, range),
+      responseType: "blob",
+    });
+
+    const fileName = fileNameFromDisposition(
+      response.headers["content-disposition"],
+      `sifipro-${kind}.csv`,
+    );
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    throw await unwrapBlobError(error);
+  }
 }

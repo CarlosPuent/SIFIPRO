@@ -43,6 +43,12 @@ export const appNavigation: NavigationItem[] = [
     description: 'Admin-only management of tenant loyalty programs.',
     roles: ['ADMIN'],
   },
+  {
+    label: 'Audit Log',
+    path: '/audit',
+    description: 'Admin-only log of every points grant, redemption and adjustment.',
+    roles: ['ADMIN'],
+  },
 ];
 
 export const defaultRoute = '/dashboard';

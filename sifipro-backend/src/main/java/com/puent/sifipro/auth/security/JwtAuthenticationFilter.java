@@ -11,12 +11,21 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    /**
+     * Request attribute read by RestAuthenticationEntryPoint to explain why a
+     * signature-valid token was not accepted.
+     */
+    public static final String REJECTION_REASON_ATTRIBUTE = "sifipro.auth.rejectionReason";
+    public static final String REASON_USER_INACTIVE = "USER_INACTIVE";
+    public static final String REASON_TENANT_SUSPENDED = "TENANT_SUSPENDED";
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
@@ -47,17 +56,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+            UserDetails userDetails;
+            try {
+                userDetails = userDetailsService.loadUserByUsername(userEmail);
+            } catch (UsernameNotFoundException ex) {
+                // Token for a user that no longer exists (e.g. email changed): anonymous → 401.
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             if (jwtService.isTokenValid(token, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                String rejectionReason = resolveRejectionReason(userDetails);
+                if (rejectionReason != null) {
+                    // Leave the request anonymous: protected endpoints answer 401 and the
+                    // entry point reports this reason, so already-issued tokens stop working
+                    // as soon as the user or its tenant is deactivated.
+                    request.setAttribute(REJECTION_REASON_ATTRIBUTE, rejectionReason);
+                } else {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String resolveRejectionReason(UserDetails userDetails) {
+        if (!userDetails.isEnabled()) {
+            return REASON_USER_INACTIVE;
+        }
+        if (userDetails instanceof AuthenticatedUser authenticatedUser && !authenticatedUser.isTenantActive()) {
+            return REASON_TENANT_SUSPENDED;
+        }
+        return null;
     }
 }

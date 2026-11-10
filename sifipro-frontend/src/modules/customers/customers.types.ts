@@ -6,6 +6,8 @@ export interface CustomerResponse {
   phone: string | null;
   pointsBalance: number | string;
   active: boolean;
+  /** RF-08 · the customer can sign in to the self-service portal. */
+  portalEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

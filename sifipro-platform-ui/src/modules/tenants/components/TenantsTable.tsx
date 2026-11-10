@@ -8,12 +8,20 @@ type TenantsTableProps = {
   tenants: TenantResponse[];
   actionTenantId: number | null;
   onToggleStatus: (tenant: TenantResponse) => void;
+  onEdit: (tenant: TenantResponse) => void;
 };
+
+// RF-01 · each merchant's own sign-in URL (tenant-ui on its subdomain).
+function tenantUrl(code: string): string {
+  const host = typeof window === "undefined" ? "localhost" : window.location.hostname;
+  return `http://${code}.${host}:5173/login`;
+}
 
 export function TenantsTable({
   tenants,
   actionTenantId,
   onToggleStatus,
+  onEdit,
 }: TenantsTableProps) {
   return (
     <SurfaceCard className="overflow-hidden p-0">
@@ -36,7 +44,8 @@ export function TenantsTable({
           <thead className="bg-slate-50/70 text-[11px] uppercase tracking-[0.14em] text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
             <tr>
               <th className="px-5 py-3 font-semibold">Name</th>
-              <th className="px-5 py-3 font-semibold">Code</th>
+              <th className="px-5 py-3 font-semibold">Code / subdomain</th>
+              <th className="px-5 py-3 font-semibold">Contact</th>
               <th className="px-5 py-3 font-semibold">Status</th>
               <th className="px-5 py-3 font-semibold">Created</th>
               <th className="px-5 py-3 font-semibold">Actions</th>
@@ -55,7 +64,26 @@ export function TenantsTable({
                     {tenant.name}
                   </td>
                   <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">
-                    {tenant.code}
+                    <p className="font-mono text-xs">{tenant.code}</p>
+                    <a
+                      href={tenantUrl(tenant.code)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
+                    >
+                      {tenant.code}.localhost:5173
+                    </a>
+                  </td>
+                  <td className="px-5 py-3.5 text-xs text-slate-600 dark:text-slate-300">
+                    {tenant.contactEmail || tenant.contactPhone || tenant.address ? (
+                      <>
+                        {tenant.contactEmail ? <p>{tenant.contactEmail}</p> : null}
+                        {tenant.contactPhone ? <p>{tenant.contactPhone}</p> : null}
+                        {tenant.address ? <p className="text-slate-400">{tenant.address}</p> : null}
+                      </>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     <TenantStatusBadge active={tenant.active} />
@@ -63,7 +91,10 @@ export function TenantsTable({
                   <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">
                     {formatDateTime(tenant.createdAt)}
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className="space-x-1 whitespace-nowrap px-5 py-3.5">
+                    <Button variant="ghost" size="sm" onClick={() => onEdit(tenant)}>
+                      Edit
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import com.puent.sifipro.customer.entity.Customer;
 import com.puent.sifipro.user.entity.AppUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -34,6 +35,26 @@ public class JwtService {
         extraClaims.put("tenantCode", user.getTenant().getCode());
         extraClaims.put("tenantName", user.getTenant().getName());
         return buildToken(extraClaims, user.getEmail(), jwtExpirationMs);
+    }
+
+    /** Claim that marks a customer-portal token (RF-08); staff tokens never carry it. */
+    public static final String SCOPE_CLAIM = "scope";
+    public static final String CUSTOMER_SCOPE = "CUSTOMER";
+    public static final String CUSTOMER_SUBJECT_PREFIX = "customer:";
+
+    /**
+     * Token for the customer self-service portal. Its subject is "customer:{id}", which can
+     * never match a staff email (emails always contain '@'), so JwtAuthenticationFilter
+     * ignores it and only the portal filter accepts it.
+     */
+    public String generateCustomerToken(Customer customer) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put(SCOPE_CLAIM, CUSTOMER_SCOPE);
+        extraClaims.put("role", CUSTOMER_SCOPE);
+        extraClaims.put("customerId", customer.getId());
+        extraClaims.put("tenantId", customer.getTenant().getId());
+        extraClaims.put("tenantCode", customer.getTenant().getCode());
+        return buildToken(extraClaims, CUSTOMER_SUBJECT_PREFIX + customer.getId(), jwtExpirationMs);
     }
 
     public String extractUsername(String token) {

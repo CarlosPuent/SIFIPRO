@@ -1,8 +1,10 @@
 package com.puent.sifipro.report.controller;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import com.puent.sifipro.report.dto.RecentActivityResponse;
 import com.puent.sifipro.report.dto.ReportGranularity;
@@ -12,8 +14,10 @@ import com.puent.sifipro.report.dto.StockAlertEntry;
 import com.puent.sifipro.report.dto.TierDistributionEntry;
 import com.puent.sifipro.report.dto.TopCustomerReportEntry;
 import com.puent.sifipro.report.dto.TopRewardReportEntry;
+import com.puent.sifipro.report.export.ReportPdfWriter;
 import com.puent.sifipro.report.service.ReportScope;
 import com.puent.sifipro.report.service.ReportService;
+import com.puent.sifipro.tenant.repository.TenantRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +29,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,8 +51,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReportController {
 
     private final ReportService reportService;
+    private final TenantRepository tenantRepository;
 
-    public ReportController(ReportService reportService) {
+    public ReportController(ReportService reportService, TenantRepository tenantRepository) {
+        this.tenantRepository = tenantRepository;
         this.reportService = reportService;
     }
 
@@ -161,6 +168,43 @@ public class ReportController {
         ReportScope scope = reportService.resolveScope(programConfigId, from, to, authentication.getName());
         prepareCsvResponse(response, fileName("purchases", scope));
         reportService.writePurchasesCsv(scope, response.getWriter());
+    }
+
+    @GetMapping("/export/report.pdf")
+    @Operation(summary = "Export the full report as PDF",
+            description = "Formal, printable report of the program and period: indicators, monthly evolution, top customers "
+                    + "and rewards, tier distribution and stock alerts. Same tenant-isolated figures as the other endpoints.")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/pdf", schema = @Schema(type = "string", format = "binary")))
+    public ResponseEntity<byte[]> exportReportPdf(
+            @RequestParam Long programConfigId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            Authentication authentication) {
+        String user = authentication.getName();
+        ReportScope scope = reportService.resolveScope(programConfigId, from, to, user);
+        String tenantName = tenantRepository.findById(scope.tenantId())
+                .map(tenant -> tenant.getName())
+                .orElse(scope.tenantCode());
+
+        ReportPdfWriter.ReportPdfData data = new ReportPdfWriter.ReportPdfData(
+                tenantName,
+                scope.tenantCode(),
+                user,
+                LocalDateTime.now(),
+                reportService.getSummary(programConfigId, from, to, user),
+                reportService.getTimeSeries(programConfigId, from, to, ReportGranularity.MONTH, user),
+                reportService.getTopCustomers(programConfigId, from, to, 10, user),
+                reportService.getTopRewards(programConfigId, from, to, 10, user),
+                reportService.getTierDistribution(user),
+                reportService.getStockAlerts(programConfigId, null, 20, user));
+
+        ByteArrayOutputStream pdf = new ByteArrayOutputStream();
+        ReportPdfWriter.write(data, pdf);
+        String fileName = fileName("report", scope).replace(".csv", ".pdf");
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .body(pdf.toByteArray());
     }
 
     private static void prepareCsvResponse(HttpServletResponse response, String fileName) {

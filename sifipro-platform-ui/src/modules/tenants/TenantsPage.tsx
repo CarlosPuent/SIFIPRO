@@ -5,13 +5,19 @@ import { SurfaceCard } from "../../components/ui/SurfaceCard";
 import { extractErrorMessage } from "../../lib/error-utils";
 import { CreateTenantModal } from "./components/CreateTenantModal";
 import { TenantsTable } from "./components/TenantsTable";
+import { EditTenantModal } from "./components/EditTenantModal";
 import {
   activateTenant,
   createTenant,
   deactivateTenant,
   getTenants,
+  updateTenant,
 } from "./tenant.service";
-import type { CreateTenantRequest, TenantResponse } from "./tenant.types";
+import type {
+  CreateTenantRequest,
+  TenantResponse,
+  UpdateTenantRequest,
+} from "./tenant.types";
 
 function TenantsLoadingState() {
   return (
@@ -71,6 +77,10 @@ export function TenantsPage() {
   const [modalError, setModalError] = useState<string | null>(null);
 
   const [actionTenantId, setActionTenantId] = useState<number | null>(null);
+
+  const [editingTenant, setEditingTenant] = useState<TenantResponse | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const loadTenants = useCallback(async () => {
     setIsLoading(true);
@@ -135,6 +145,22 @@ export function TenantsPage() {
       setModalError(extractErrorMessage(error));
     } finally {
       setIsSavingModal(false);
+    }
+  };
+
+  const handleSubmitEdit = async (payload: UpdateTenantRequest) => {
+    if (!editingTenant) return;
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateTenant(editingTenant.id, payload);
+      toast.success("Tenant updated successfully.");
+      setEditingTenant(null);
+      await loadTenants();
+    } catch (error) {
+      setEditError(extractErrorMessage(error));
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -209,8 +235,24 @@ export function TenantsPage() {
           tenants={tenants}
           actionTenantId={actionTenantId}
           onToggleStatus={handleToggleTenantStatus}
+          onEdit={(tenant) => {
+            setEditError(null);
+            setEditingTenant(tenant);
+          }}
         />
       )}
+
+      {editingTenant ? (
+        <EditTenantModal
+          tenant={editingTenant}
+          isSaving={isSavingEdit}
+          serverError={editError}
+          onClose={() => {
+            if (!isSavingEdit) setEditingTenant(null);
+          }}
+          onSubmit={handleSubmitEdit}
+        />
+      ) : null}
 
       <CreateTenantModal
         open={modalOpen}

@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Building2,
   type LucideIcon,
   Zap,
@@ -9,6 +10,7 @@ import { userHasAnyRole } from "../../auth/role-utils";
 import { useAuth } from "../../auth/useAuth";
 
 const navIcons: Record<string, LucideIcon> = {
+  "/overview": BarChart3,
   "/tenants": Building2,
 };
 

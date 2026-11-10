@@ -1,6 +1,7 @@
 package com.puent.sifipro.customer.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import com.puent.sifipro.shared.entity.BaseEntity;
 import com.puent.sifipro.tenant.entity.Tenant;
 import jakarta.persistence.Column;
@@ -39,6 +40,13 @@ public class Customer extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
+
+    // RF-08 · BCrypt hash of the self-service portal password; null = no portal access (V5).
+    @Column(name = "portal_password_hash", length = 255)
+    private String portalPasswordHash;
+
+    @Column(name = "portal_last_login_at")
+    private LocalDateTime portalLastLoginAt;
 
     public String getFirstName() {
         return firstName;
@@ -101,5 +109,25 @@ public class Customer extends BaseEntity {
 
     public Long getVersion() {
         return version;
+    }
+
+    public String getPortalPasswordHash() {
+        return portalPasswordHash;
+    }
+
+    public void setPortalPasswordHash(String portalPasswordHash) {
+        this.portalPasswordHash = portalPasswordHash;
+    }
+
+    public LocalDateTime getPortalLastLoginAt() {
+        return portalLastLoginAt;
+    }
+
+    public void setPortalLastLoginAt(LocalDateTime portalLastLoginAt) {
+        this.portalLastLoginAt = portalLastLoginAt;
+    }
+
+    public boolean isPortalEnabled() {
+        return portalPasswordHash != null;
     }
 }

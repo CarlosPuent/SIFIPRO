@@ -4,6 +4,7 @@ import com.puent.sifipro.auth.security.CustomUserDetailsService;
 import com.puent.sifipro.auth.security.JwtAuthenticationFilter;
 import com.puent.sifipro.auth.security.RestAccessDeniedHandler;
 import com.puent.sifipro.auth.security.RestAuthenticationEntryPoint;
+import com.puent.sifipro.portal.security.CustomerPortalAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,16 +28,19 @@ public class SecurityConfig {
         private final CustomUserDetailsService customUserDetailsService;
         private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
         private final RestAccessDeniedHandler restAccessDeniedHandler;
+        private final CustomerPortalAuthenticationFilter customerPortalAuthenticationFilter;
 
         public SecurityConfig(
                         JwtAuthenticationFilter jwtAuthenticationFilter,
                         CustomUserDetailsService customUserDetailsService,
                         RestAuthenticationEntryPoint restAuthenticationEntryPoint,
-                        RestAccessDeniedHandler restAccessDeniedHandler) {
+                        RestAccessDeniedHandler restAccessDeniedHandler,
+                        CustomerPortalAuthenticationFilter customerPortalAuthenticationFilter) {
                 this.jwtAuthenticationFilter = jwtAuthenticationFilter;
                 this.customUserDetailsService = customUserDetailsService;
                 this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
                 this.restAccessDeniedHandler = restAccessDeniedHandler;
+                this.customerPortalAuthenticationFilter = customerPortalAuthenticationFilter;
         }
 
         @Bean
@@ -53,6 +57,8 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
                                                                 "/api/auth/login",
+                                                                "/api/portal/auth/login",
+                                                                "/api/public/**",
                                                                 "/api/health",
                                                                 "/v3/api-docs/**",
                                                                 "/swagger-ui.html",
@@ -60,6 +66,12 @@ public class SecurityConfig {
                                                                 "/actuator/health",
                                                                 "/actuator/info")
                                                 .permitAll()
+                                                // RF-08 · customer self-service portal: only customer tokens.
+                                                .requestMatchers("/api/portal/**")
+                                                .hasRole("CUSTOMER")
+                                                // Granting/revoking portal access is ADMIN-only.
+                                                .requestMatchers("/api/customers/*/portal-access")
+                                                .hasRole("ADMIN")
                                                 // STAFF needs program read access to bootstrap the app context.
                                                 .requestMatchers(HttpMethod.GET, "/api/program-config/**")
                                                 .hasAnyRole("ADMIN", "STAFF")
@@ -90,8 +102,11 @@ public class SecurityConfig {
                                                                 "/api/transactions/**",
                                                                 "/api/redemptions/**")
                                                 .hasRole("ADMIN")
-                                                .anyRequest().authenticated())
-                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                                                // Anything else is staff-only: a customer token never reaches
+                                                // tenant operations (e.g. /api/auth/me).
+                                                .anyRequest().hasAnyRole("ADMIN", "STAFF"))
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                .addFilterAfter(customerPortalAuthenticationFilter, JwtAuthenticationFilter.class);
 
                 return http.build();
         }

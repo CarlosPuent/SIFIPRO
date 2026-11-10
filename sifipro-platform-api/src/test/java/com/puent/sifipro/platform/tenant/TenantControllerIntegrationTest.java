@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -213,6 +214,63 @@ class TenantControllerIntegrationTest {
 
         Tenant reloaded = tenantRepository.findById(tenant.getId()).orElseThrow();
         assertThat(reloaded.getActive()).isFalse();
+    }
+
+    @Test
+    void createTenant_withInvalidSubdomainCode_returns400() throws Exception {
+        String requestBody = """
+                {
+                  "name": "Bad Code Tenant",
+                  "code": "codigo con espacios",
+                  "adminFirstName": "Test",
+                  "adminLastName": "Admin",
+                  "adminEmail": "bad-code-%s@sifipro-test.dev",
+                  "adminPassword": "TestAdmin123!"
+                }
+                """.formatted(System.nanoTime());
+
+        mockMvc.perform(post("/api/platform/tenants")
+                        .header("Authorization", "Bearer " + platformAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateTenant_savesContactData_andKeepsTheCode() throws Exception {
+        Tenant tenant = createTenantDirectly("contact-" + System.nanoTime());
+
+        mockMvc.perform(put("/api/platform/tenants/{id}", tenant.getId())
+                        .header("Authorization", "Bearer " + platformAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Comercio Editado",
+                                  "contactEmail": "Contacto@Comercio.com",
+                                  "contactPhone": "+503-2222-3333",
+                                  "address": "Santa Ana, El Salvador"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Comercio Editado"))
+                .andExpect(jsonPath("$.code").value(tenant.getCode()))
+                .andExpect(jsonPath("$.contactEmail").value("contacto@comercio.com"))
+                .andExpect(jsonPath("$.contactPhone").value("+503-2222-3333"))
+                .andExpect(jsonPath("$.address").value("Santa Ana, El Salvador"));
+    }
+
+    @Test
+    void platformMetrics_requirePlatformAdmin_andCoverEveryTenant() throws Exception {
+        mockMvc.perform(get("/api/platform/metrics"))
+                .andExpect(status().isUnauthorized());
+
+        long tenants = tenantRepository.count();
+        mockMvc.perform(get("/api/platform/metrics")
+                        .header("Authorization", "Bearer " + platformAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.tenants").value(tenants))
+                .andExpect(jsonPath("$.monthly.length()").value(6))
+                .andExpect(jsonPath("$.tenants.length()").value(tenants));
     }
 
     private Tenant findTenantByCode(String code) {

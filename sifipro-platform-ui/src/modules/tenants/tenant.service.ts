@@ -3,6 +3,7 @@ import type {
   CreateTenantRequest,
   PageResponse,
   TenantResponse,
+  UpdateTenantRequest,
 } from "./tenant.types";
 
 export async function getTenants(): Promise<TenantResponse[]> {
@@ -38,5 +39,10 @@ export async function deactivateTenant(id: number): Promise<TenantResponse> {
   const response = await apiClient.patch<TenantResponse>(
     `/api/platform/tenants/${id}/deactivate`,
   );
+  return response.data;
+}
+
+export async function updateTenant(id: number, payload: UpdateTenantRequest): Promise<TenantResponse> {
+  const response = await apiClient.put<TenantResponse>(`/api/platform/tenants/${id}`, payload);
   return response.data;
 }

@@ -19,6 +19,10 @@ public class LoginRequest {
     @Size(max = 100, message = "Password must not exceed 100 characters")
     private String password;
 
+    @Schema(description = "Optional tenant code taken from the subdomain (RF-01). When present, the user must belong to that tenant.", example = "demo")
+    @Size(max = 100, message = "Tenant code must not exceed 100 characters")
+    private String tenantCode;
+
     public String getEmail() {
         return email;
     }
@@ -33,5 +37,13 @@ public class LoginRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getTenantCode() {
+        return tenantCode;
+    }
+
+    public void setTenantCode(String tenantCode) {
+        this.tenantCode = tenantCode;
     }
 }

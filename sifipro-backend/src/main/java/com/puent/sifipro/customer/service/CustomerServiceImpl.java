@@ -139,6 +139,7 @@ public class CustomerServiceImpl implements CustomerService {
         response.setPhone(customer.getPhone());
         response.setPointsBalance(customer.getPointsBalance());
         response.setActive(customer.getActive());
+        response.setPortalEnabled(customer.isPortalEnabled());
         response.setCreatedAt(customer.getCreatedAt());
         response.setUpdatedAt(customer.getUpdatedAt());
 

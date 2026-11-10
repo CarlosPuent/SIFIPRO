@@ -20,8 +20,19 @@ import { ProgramConfigPage } from "../../modules/program-config/ProgramConfigPag
 import { AuditLogPage } from "../../modules/audit/AuditLogPage";
 import { ProgramProvider } from "../../modules/program-config/ProgramContext";
 import { NotFoundPage } from "../../pages/NotFoundPage";
+import { PortalLoginPage } from "../../modules/portal/PortalLoginPage";
+import { PortalPage } from "../../modules/portal/PortalPage";
 
 const router = createBrowserRouter([
+  // RF-08 · customer self-service portal: its own session, outside the staff layout.
+  {
+    path: "/portal/login",
+    element: <PortalLoginPage />,
+  },
+  {
+    path: "/portal",
+    element: <PortalPage />,
+  },
   {
     path: "/login",
     element: (

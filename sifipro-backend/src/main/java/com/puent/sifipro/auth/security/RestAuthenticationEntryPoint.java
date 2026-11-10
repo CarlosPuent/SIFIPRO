@@ -38,6 +38,10 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         } else if (JwtAuthenticationFilter.REASON_USER_INACTIVE.equals(rejectionReason)) {
             message = "User account is inactive.";
             details = List.of(JwtAuthenticationFilter.REASON_USER_INACTIVE);
+        } else if (com.puent.sifipro.portal.security.CustomerPortalAuthenticationFilter.REASON_CUSTOMER_INACTIVE
+                .equals(rejectionReason)) {
+            message = "Customer portal access is not enabled.";
+            details = List.of(com.puent.sifipro.portal.security.CustomerPortalAuthenticationFilter.REASON_CUSTOMER_INACTIVE);
         } else {
             message = "Authentication is required to access this resource.";
             details = List.of("Provide a valid Bearer token.");

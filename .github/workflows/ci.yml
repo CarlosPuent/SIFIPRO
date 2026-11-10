@@ -1,0 +1,119 @@
+# CI de SIFIPRO (RNF-05): en cada push y pull request compila y prueba los 4 subproyectos.
+#
+#  - backend: tenant-api (incluye pruebas con Testcontainers) y platform-api contra un
+#    PostgreSQL 16 de servicio, el mismo motor que usa docker-compose.
+#  - frontends: lint, pruebas unitarias (si existen) y build de producción de ambas UIs.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backends (tenant-api + platform-api)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sifipro_db
+          POSTGRES_USER: sifipro
+          POSTGRES_PASSWORD: sifipro-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sifipro -d sifipro_db"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_USERNAME: sifipro
+      DB_PASSWORD: sifipro-ci
+      APP_JWT_SECRET: ci-tenant-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJ
+      PLATFORM_JWT_SECRET: ci-platform-secret-9876543210-zyxwvutsrqponmlkjihgfedcba-JIHGFEDCBA
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # tenant-api primero: aplica las migraciones Flyway y siembra los datos demo que
+      # luego usan las pruebas de platform-api (que nunca toca el esquema).
+      - name: tenant-api · compilar y probar
+        working-directory: sifipro-backend
+        run: |
+          set -o pipefail
+          mvn -B -ntp test 2>&1 | tee ../tenant-api.log
+
+      - name: platform-api · compilar y probar
+        working-directory: sifipro-platform-api
+        run: |
+          set -o pipefail
+          mvn -B -ntp test 2>&1 | tee ../platform-api.log
+
+      # Deja constancia del total de pruebas ejecutadas en el resumen del check.
+      - name: Total de pruebas
+        if: always()
+        run: |
+          for d in sifipro-backend sifipro-platform-api; do
+            [ -d "$d/target/surefire-reports" ] || continue
+            total=$(grep -h "<testsuite" $d/target/surefire-reports/TEST-*.xml \
+              | sed -E 's/.* tests="([0-9]+)".* failures="([0-9]+)".*/\1 \2/' \
+              | awk '{t+=$1; f+=$2} END {print t" pruebas, "f" fallidas"}')
+            echo "::notice title=$d::$total"
+          done
+
+      # Resume los errores como anotaciones, visibles en el resumen del check.
+      - name: Resumen de errores
+        if: failure()
+        run: |
+          for f in tenant-api.log platform-api.log; do
+            [ -f "$f" ] || continue
+            body=$(grep -E "\[ERROR\]|FAIL|Tests run:.*Fail" "$f" | grep -v "^\[ERROR\] *$" | head -60 \
+              | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            [ -n "$body" ] && echo "::error title=$f::$body"
+          done
+          for d in sifipro-backend sifipro-platform-api; do
+            for r in $d/target/surefire-reports/*.txt; do
+              [ -f "$r" ] || continue
+              if grep -q "FAILURE\|ERROR" "$r"; then
+                body=$(head -40 "$r" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+                echo "::error title=$(basename "$r")::$body"
+              fi
+            done
+          done
+
+  frontend:
+    name: Frontend (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [sifipro-frontend, sifipro-platform-ui]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Pruebas unitarias
+        run: npm run test --if-present
+      - name: Build de producción
+        run: npm run build

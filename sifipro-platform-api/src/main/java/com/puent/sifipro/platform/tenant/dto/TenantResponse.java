@@ -8,6 +8,9 @@ public class TenantResponse {
     private String name;
     private String code;
     private Boolean active;
+    private String contactEmail;
+    private String contactPhone;
+    private String address;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -57,5 +60,29 @@ public class TenantResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getContactPhone() {
+        return contactPhone;
+    }
+
+    public void setContactPhone(String contactPhone) {
+        this.contactPhone = contactPhone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 }

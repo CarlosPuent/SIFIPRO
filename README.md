@@ -1,5 +1,7 @@
 # SIFIPRO — Sistema de Fidelización Profesional
 
+[![CI](https://github.com/CarlosPuent/SIFIPRO/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosPuent/SIFIPRO/actions/workflows/ci.yml)
+
 Plataforma SaaS multi-tenant para administrar programas de lealtad: puntos, recompensas y canjes
 para comercios y empresas de servicios. Cada comercio (tenant) gestiona sus clientes, registra
 compras que acumulan puntos automáticamente, procesa canjes y consulta reportes desde una
@@ -17,7 +19,11 @@ SIFIPRO ofrece ese sistema como servicio compartido:
 - los puntos se calculan en el servidor y cada movimiento queda en una bitácora de auditoría con
   su autor;
 - los canjes validan saldo y stock, y los reportes muestran puntos emitidos y canjeados;
-- el equipo de SIFIPRO da de alta, suspende y reactiva comercios desde un panel separado.
+- el equipo de SIFIPRO da de alta, suspende y reactiva comercios desde un panel separado, y
+  consulta un reporte de actividad de toda la plataforma;
+- cada comercio tiene su propio subdominio (`<codigo>.localhost:5173`) y sus clientes consultan
+  saldo, nivel, recompensas e historial en un **portal del cliente**;
+- el reporte del comercio se exporta en **PDF** y en CSV.
 
 ---
 
@@ -197,7 +203,9 @@ salir del registro (los contenedores siguen funcionando).
 | Aplicación | URL | Para qué sirve |
 |---|---|---|
 | **tenant-ui** (panel del comercio) | http://localhost:5173 | Operación diaria: clientes, compras, canjes, reportes, bitácora |
-| **platform-ui** (panel de plataforma) | http://localhost:5174 | Alta, suspensión y reactivación de comercios |
+| **tenant-ui en el subdominio de un comercio** | http://demo.localhost:5173 | El mismo panel, identificado con el comercio `demo` (solo admite a sus usuarios) |
+| **Portal del cliente** | http://demo.localhost:5173/portal/login | El cliente final consulta sus puntos, nivel, recompensas e historial |
+| **platform-ui** (panel de plataforma) | http://localhost:5174 | Reporte de la plataforma, alta, edición, suspensión y reactivación de comercios |
 | **Swagger** (documentación de la API del comercio) | http://localhost:8085/swagger-ui.html | Probar los endpoints de tenant-api |
 
 ### Paso 7. Iniciar sesión
@@ -221,6 +229,12 @@ Se crean automáticamente la primera vez que arranca el sistema con la base de d
 | Administrador | admin@sifipro.com | Admin123! | tenant-ui (5173) | `demo` |
 | Personal operativo | staff@sifipro.com | Staff123! | tenant-ui (5173) | `demo` |
 | Administrador | admin@cafenorte.com | Admin123! | tenant-ui (5173) | `cafe-norte` (Café del Norte) |
+| **Cliente (portal)** | laura.mendoza@sifipro.dev | Cliente123! | http://demo.localhost:5173/portal/login | `demo` |
+| **Cliente (portal)** | laura.mendoza@sifipro.dev | Cliente123! | http://cafe-norte.localhost:5173/portal/login | `cafe-norte` |
+
+> Los subdominios `*.localhost` funcionan sin configurar nada en Chrome, Edge y Firefox: el
+> navegador los resuelve a tu propia máquina. Laura existe en los dos comercios con el mismo
+> correo y contraseña: el **subdominio** decide en cuál inicia sesión y qué saldo ve.
 
 **Datos demo:**
 
@@ -259,6 +273,13 @@ Se crean automáticamente la primera vez que arranca el sistema con la base de d
 5. Pulsa **Activate** y el ADMIN vuelve a entrar con normalidad.
 6. Con `admin@sifipro.com`, abre un cliente, pulsa **Adjust points**, suma puntos con un motivo y
    revisa el movimiento en **Audit Log**, con tu usuario y el motivo.
+7. **Portal del cliente:** en el perfil del cliente pulsa **Portal access**, asígnale una
+   contraseña y abre la URL que muestra (`http://<codigo>.localhost:5173/portal/login`). El cliente
+   ve su saldo, su nivel, las recompensas que ya puede canjear y su historial. Si el ADMIN revoca
+   el acceso, la sesión del cliente se cierra en su siguiente acción.
+8. **Reportes:** en **Reports** pulsa **Export PDF report** para descargar el reporte formal del
+   programa y periodo elegidos. En platform-ui, **Overview** muestra la actividad de todos los
+   comercios y se exporta a CSV.
 
 ---
 
@@ -361,7 +382,10 @@ página.
 | Recompensas | `/api/rewards` | ADMIN y STAFF consultan; ADMIN gestiona |
 | Compras | `/api/transactions` | ADMIN y STAFF |
 | Canjes | `/api/redemptions` | ADMIN y STAFF (valida saldo del programa y stock) |
-| Reportes y exportación CSV | `/api/reports` | ADMIN y STAFF (solo lectura) |
+| Reportes y exportación CSV / PDF | `/api/reports` (`/export/report.pdf`) | ADMIN y STAFF (solo lectura) |
+| Acceso al portal del cliente | `/api/customers/{id}/portal-access` | ADMIN (concede con contraseña o revoca) |
+| Portal del cliente | `/api/portal/**` | Solo tokens de cliente (rol CUSTOMER) |
+| Comercio por subdominio | `/api/public/tenants/{codigo}` | Público (nombre del comercio para la pantalla de ingreso) |
 | Bitácora de auditoría | `/api/audit/points-movements` | ADMIN |
 | Usuarios internos | `/api/users` | ADMIN |
 | Estado del servicio | `/api/health` | Público |
@@ -371,12 +395,21 @@ página.
 | Módulo | Endpoint base | Acceso |
 |---|---|---|
 | Autenticación | `/api/platform/auth` | Público (login) / PLATFORM_ADMIN (`/me`) |
-| Comercios (tenants) | `/api/platform/tenants` | PLATFORM_ADMIN |
+| Comercios (tenants) | `/api/platform/tenants` | PLATFORM_ADMIN (alta, edición de contacto, activar/desactivar) |
+| Reporte de la plataforma | `/api/platform/metrics` | PLATFORM_ADMIN (solo agregados por comercio) |
 | Estado del servicio | `/api/platform/health` | Público |
 
 Todos los datos de un comercio se filtran por el comercio del usuario autenticado: un recurso de
 otro comercio responde 404. El esquema de la base de datos se crea con las migraciones Flyway
-`V1` a `V4` de `sifipro-backend/src/main/resources/db/migration/`.
+`V1` a `V5` de `sifipro-backend/src/main/resources/db/migration/`.
+
+**Roles y tokens:** el personal del comercio (ADMIN/STAFF) y los clientes del portal (CUSTOMER)
+usan tokens distintos: un token de cliente solo sirve en `/api/portal/**` y uno del personal nunca
+entra al portal (403). El panel de plataforma firma con un secreto propio.
+
+**Integración continua:** cada push ejecuta en GitHub Actions las pruebas de ambos backends (con
+PostgreSQL real y Testcontainers), el lint, las pruebas unitarias (Vitest) y el build de ambas UIs
+(`.github/workflows/ci.yml`).
 
 ---
 
@@ -397,7 +430,9 @@ defecto en el código: si falta una, el servicio correspondiente no arranca.
 
 ## Documentación adicional
 
-- `docs/MATRIZ_AVANCE.md`: requerimientos de la propuesta con estado, avance y evidencia.
+- `docs/MATRIZ_FINAL.md`: matriz final de requerimientos (entrega final) con estado y evidencia.
+- `docs/CAMBIOS_AVANCE_FINAL.md`: qué se agregó para la entrega final y cómo se verificó.
+- `docs/MATRIZ_AVANCE.md`: matriz del Avance 1 (corte del 2026-09-27).
 - `docs/CAMBIOS_AVANCE1.md`: cambios del Avance 1, decisiones técnicas y pendientes.
 - `docs/AUDITORIA_AVANCE_1.md`: auditoría funcional y técnica del estado inicial.
 - `docs/database/consultas-demo.sql`: consultas SQL de demostración

@@ -9,6 +9,7 @@ import { AuthProvider } from "../../auth/AuthContext";
 import { ProtectedRoute } from "../../auth/ProtectedRoute";
 import { LoginPage } from "../../modules/auth/LoginPage";
 import { TenantsPage } from "../../modules/tenants/TenantsPage";
+import { PlatformOverviewPage } from "../../modules/metrics/PlatformOverviewPage";
 import { NotFoundPage } from "../../pages/NotFoundPage";
 
 const router = createBrowserRouter([
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
         // placeholder route.
         path: "dashboard",
         element: <Navigate to={defaultRoute} replace />,
+      },
+      {
+        path: "overview",
+        element: <PlatformOverviewPage />,
       },
       {
         path: "tenants",

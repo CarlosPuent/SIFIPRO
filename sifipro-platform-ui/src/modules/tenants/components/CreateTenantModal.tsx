@@ -18,6 +18,7 @@ type FormErrors = {
   adminLastName?: string;
   adminEmail?: string;
   adminPassword?: string;
+  contactEmail?: string;
 };
 
 const EMPTY_VALUES: TenantFormValues = {
@@ -27,7 +28,13 @@ const EMPTY_VALUES: TenantFormValues = {
   adminLastName: "",
   adminEmail: "",
   adminPassword: "",
+  contactEmail: "",
+  contactPhone: "",
+  address: "",
 };
+
+// The code is also the merchant's subdomain (RF-01): a valid DNS label.
+const CODE_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -40,6 +47,12 @@ function validate(values: TenantFormValues): FormErrors {
 
   if (!values.code.trim()) {
     errors.code = "Tenant code is required.";
+  } else if (!CODE_PATTERN.test(values.code.trim().toLowerCase())) {
+    errors.code = "Use lowercase letters, digits and hyphens only (it becomes the subdomain).";
+  }
+
+  if (values.contactEmail.trim() && !EMAIL_PATTERN.test(values.contactEmail.trim())) {
+    errors.contactEmail = "Contact email must be a valid format.";
   }
 
   if (!values.adminFirstName.trim()) {
@@ -79,6 +92,9 @@ export function CreateTenantModal({
   const adminLastNameFieldId = useId();
   const adminEmailFieldId = useId();
   const adminPasswordFieldId = useId();
+  const contactEmailFieldId = useId();
+  const contactPhoneFieldId = useId();
+  const addressFieldId = useId();
 
   const [values, setValues] = useState<TenantFormValues>(EMPTY_VALUES);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -144,6 +160,9 @@ export function CreateTenantModal({
       adminLastName: values.adminLastName.trim(),
       adminEmail: values.adminEmail.trim(),
       adminPassword: values.adminPassword,
+      contactEmail: values.contactEmail.trim() || undefined,
+      contactPhone: values.contactPhone.trim() || undefined,
+      address: values.address.trim() || undefined,
     });
   };
 
@@ -160,7 +179,7 @@ export function CreateTenantModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={dialogTitleId}
-        className="w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xl dark:border-slate-800/80 dark:bg-slate-950 sm:p-6"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xl dark:border-slate-800/80 dark:bg-slate-950 sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -199,7 +218,12 @@ export function CreateTenantModal({
             />
           </FormField>
 
-          <FormField label="Tenant Code" htmlFor={codeFieldId} error={errors.code}>
+          <FormField
+            label="Tenant Code"
+            htmlFor={codeFieldId}
+            error={errors.code}
+            hint={values.code.trim() ? `Subdomain: ${values.code.trim().toLowerCase()}.localhost:5173` : "Also used as the merchant's subdomain."}
+          >
             <TextInput
               id={codeFieldId}
               type="text"
@@ -210,6 +234,43 @@ export function CreateTenantModal({
               placeholder="acme"
             />
           </FormField>
+
+          <p className="pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Merchant contact</p>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Contact Email" htmlFor={contactEmailFieldId} error={errors.contactEmail}>
+              <TextInput
+                id={contactEmailFieldId}
+                type="email"
+                value={values.contactEmail}
+                disabled={isSaving}
+                error={Boolean(errors.contactEmail)}
+                onChange={(event) => handleInputChange("contactEmail", event.target.value)}
+                placeholder="contact@acme.com"
+              />
+            </FormField>
+            <FormField label="Contact Phone" htmlFor={contactPhoneFieldId}>
+              <TextInput
+                id={contactPhoneFieldId}
+                type="tel"
+                value={values.contactPhone}
+                disabled={isSaving}
+                onChange={(event) => handleInputChange("contactPhone", event.target.value)}
+                placeholder="+503 2222-3333"
+              />
+            </FormField>
+          </div>
+          <FormField label="Address" htmlFor={addressFieldId}>
+            <TextInput
+              id={addressFieldId}
+              type="text"
+              value={values.address}
+              disabled={isSaving}
+              onChange={(event) => handleInputChange("address", event.target.value)}
+              placeholder="Santa Ana, El Salvador"
+            />
+          </FormField>
+
+          <p className="pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">First ADMIN user</p>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField

@@ -95,6 +95,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
         response.setEmail(customer.getEmail());
         response.setPhone(customer.getPhone());
         response.setActive(customer.getActive());
+        response.setPortalEnabled(customer.isPortalEnabled());
         response.setMemberSince(customer.getCreatedAt());
         response.setPointsBalance(points);
         response.setTier(tier.name());

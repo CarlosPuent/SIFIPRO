@@ -2,6 +2,7 @@ package com.puent.sifipro.platform.tenant.controller;
 
 import com.puent.sifipro.platform.tenant.dto.CreateTenantRequest;
 import com.puent.sifipro.platform.tenant.dto.TenantResponse;
+import com.puent.sifipro.platform.tenant.dto.UpdateTenantRequest;
 import com.puent.sifipro.platform.tenant.service.TenantService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,6 +50,12 @@ public class TenantController {
     @GetMapping("/{id}")
     public ResponseEntity<TenantResponse> getTenantById(@PathVariable Long id) {
         return ResponseEntity.ok(tenantService.getTenantById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TenantResponse> updateTenant(
+            @PathVariable Long id, @Valid @RequestBody UpdateTenantRequest request) {
+        return ResponseEntity.ok(tenantService.updateTenant(id, request));
     }
 
     @PatchMapping("/{id}/activate")

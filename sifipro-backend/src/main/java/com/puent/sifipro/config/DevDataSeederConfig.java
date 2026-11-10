@@ -67,6 +67,8 @@ public class DevDataSeederConfig {
 
     private static final String DEMO_TENANT_CODE = "demo";
     private static final String SECOND_TENANT_CODE = "cafe-norte";
+    private static final String PORTAL_DEMO_EMAIL = "laura.mendoza@sifipro.dev";
+    private static final String PORTAL_DEMO_PASSWORD = "Cliente123!";
 
     private static final String DEMO_ADMIN_EMAIL = "admin@sifipro.com";
     private static final String DEMO_STAFF_EMAIL = "staff@sifipro.com";
@@ -297,6 +299,16 @@ public class DevDataSeederConfig {
             tenant.setName(plan.name());
             tenant.setCode(plan.code());
             tenant.setActive(true);
+            // RF-01 · merchant contact data shown in platform-ui.
+            if (DEMO_TENANT_CODE.equals(plan.code())) {
+                tenant.setContactEmail("contacto@demo-sifipro.com");
+                tenant.setContactPhone("+503-2440-1000");
+                tenant.setAddress("Av. Independencia Sur #12, Santa Ana, El Salvador");
+            } else {
+                tenant.setContactEmail("hola@cafedelnorte.com");
+                tenant.setContactPhone("+503-2440-2000");
+                tenant.setAddress("Calle Libertad #8, Santa Ana, El Salvador");
+            }
             tenant = tenantRepository.save(tenant);
 
             for (UserPlan userPlan : plan.users()) {
@@ -394,6 +406,16 @@ public class DevDataSeederConfig {
             }
 
             backdateSeededRows(tenant.getId());
+
+            // RF-08 · demo customer with portal access (same credentials in both tenants:
+            // each tenant has its own record, the subdomain decides which one signs in).
+            Long portalCustomerId = customerIdsByEmail.get(PORTAL_DEMO_EMAIL);
+            if (portalCustomerId != null) {
+                customerRepository.findById(portalCustomerId).ifPresent(customer -> {
+                    customer.setPortalPasswordHash(passwordEncoder.encode(PORTAL_DEMO_PASSWORD));
+                    customerRepository.save(customer);
+                });
+            }
 
             log.info("Seeded tenant '{}': {} customers, {} programs, {} rewards, {} activity events.",
                     plan.code(), plan.customers().size(), plan.programs().size(), plan.rewards().size(), events.size());

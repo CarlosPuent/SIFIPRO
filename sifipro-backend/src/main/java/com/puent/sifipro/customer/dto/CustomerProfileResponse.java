@@ -17,6 +17,9 @@ public class CustomerProfileResponse {
     private String phone;
     private Boolean active;
 
+    @io.swagger.v3.oas.annotations.media.Schema(description = "Whether the customer can sign in to the self-service portal (RF-08).")
+    private boolean portalEnabled;
+
     @Schema(description = "Date the customer joined the loyalty program.")
     private LocalDateTime memberSince;
 
@@ -143,5 +146,13 @@ public class CustomerProfileResponse {
 
     public void setRecentRedemptions(List<CustomerProfileRecentRedemptionResponse> recentRedemptions) {
         this.recentRedemptions = recentRedemptions;
+    }
+
+    public boolean isPortalEnabled() {
+        return portalEnabled;
+    }
+
+    public void setPortalEnabled(boolean portalEnabled) {
+        this.portalEnabled = portalEnabled;
     }
 }

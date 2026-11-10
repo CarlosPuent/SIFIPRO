@@ -62,6 +62,12 @@ public class AuthServiceImpl implements AuthService {
         if (user.getTenant() == null) {
             throw new BusinessException("User account is not associated with a tenant.");
         }
+        // RF-01 · signing in from a merchant's subdomain only admits that merchant's users.
+        // Same message as a wrong password, so the subdomain doesn't confirm accounts elsewhere.
+        if (request.getTenantCode() != null && !request.getTenantCode().isBlank()
+                && !request.getTenantCode().trim().equalsIgnoreCase(user.getTenant().getCode())) {
+            throw new BusinessException("Invalid email or password.");
+        }
         // Checked only after the password is verified, so a suspended tenant is never
         // revealed to someone who merely knows an email.
         if (!Boolean.TRUE.equals(user.getTenant().getActive())) {

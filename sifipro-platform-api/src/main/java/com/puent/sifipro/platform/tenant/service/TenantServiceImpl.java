@@ -6,6 +6,7 @@ import com.puent.sifipro.platform.shared.exception.ConflictException;
 import com.puent.sifipro.platform.shared.exception.ResourceNotFoundException;
 import com.puent.sifipro.platform.tenant.dto.CreateTenantRequest;
 import com.puent.sifipro.platform.tenant.dto.TenantResponse;
+import com.puent.sifipro.platform.tenant.dto.UpdateTenantRequest;
 import com.puent.sifipro.platform.tenant.entity.Tenant;
 import com.puent.sifipro.platform.tenant.repository.TenantRepository;
 import com.puent.sifipro.platform.user.entity.AppUser;
@@ -52,6 +53,9 @@ public class TenantServiceImpl implements TenantService {
         tenant.setName(request.getName().trim());
         tenant.setCode(normalizedCode);
         tenant.setActive(Boolean.TRUE);
+        tenant.setContactEmail(normalizeEmail(blankToNull(request.getContactEmail())));
+        tenant.setContactPhone(blankToNull(request.getContactPhone()));
+        tenant.setAddress(blankToNull(request.getAddress()));
         tenant.setCreatedAt(now);
         tenant.setUpdatedAt(now);
         Tenant savedTenant = tenantRepository.save(tenant);
@@ -85,6 +89,18 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     @Transactional
+    public TenantResponse updateTenant(Long id, UpdateTenantRequest request) {
+        Tenant tenant = findTenantById(id);
+        tenant.setName(request.getName().trim());
+        tenant.setContactEmail(normalizeEmail(blankToNull(request.getContactEmail())));
+        tenant.setContactPhone(blankToNull(request.getContactPhone()));
+        tenant.setAddress(blankToNull(request.getAddress()));
+        tenant.setUpdatedAt(LocalDateTime.now());
+        return toResponse(tenantRepository.save(tenant));
+    }
+
+    @Override
+    @Transactional
     public TenantResponse activateTenant(Long id) {
         Tenant tenant = findTenantById(id);
         tenant.setActive(Boolean.TRUE);
@@ -114,6 +130,9 @@ public class TenantServiceImpl implements TenantService {
         response.setName(tenant.getName());
         response.setCode(tenant.getCode());
         response.setActive(tenant.getActive());
+        response.setContactEmail(tenant.getContactEmail());
+        response.setContactPhone(tenant.getContactPhone());
+        response.setAddress(tenant.getAddress());
         response.setCreatedAt(tenant.getCreatedAt());
         response.setUpdatedAt(tenant.getUpdatedAt());
         return response;
@@ -121,6 +140,10 @@ public class TenantServiceImpl implements TenantService {
 
     private String normalizeEmail(String email) {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String normalizeCode(String code) {

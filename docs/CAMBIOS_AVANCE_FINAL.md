@@ -13,7 +13,7 @@ la verificación (RNF-05).
 | platform-ui | **Overview** (indicadores, ventas de 6 meses, actividad por comercio, CSV); **Tenants** con contacto, enlace al subdominio y edición. | RF-01, RF-10 |
 | tenant-api | Portal del cliente (`/api/portal/**`) con token de alcance `CUSTOMER`, filtro de seguridad propio y revalidación en cada petición; acceso concedido/revocado por el ADMIN; login del personal restringido al comercio del subdominio; resolución pública del comercio por subdominio; **reporte PDF**. | RF-01, RF-08, RF-10 |
 | tenant-ui | Pantalla de ingreso identificada por subdominio; **portal del cliente** (`/portal`); botón **Portal access** en el perfil; botón **Export PDF report**. | RF-01, RF-08, RF-10 |
-| Calidad | GitHub Actions: pruebas de ambos backends con PostgreSQL de servicio y Testcontainers, lint, Vitest y build de ambas UIs; 7 pruebas de integración nuevas del portal, subdominio y PDF; 3 nuevas de platform-api. | RNF-05 |
+| Calidad | GitHub Actions: pruebas de ambos backends con PostgreSQL de servicio y Testcontainers, lint, Vitest y build de ambas UIs; 8 pruebas de integración nuevas del portal, subdominio (incluido CORS) y PDF; 3 nuevas de platform-api. | RNF-05 |
 
 ## 2. Decisiones técnicas
 
@@ -35,7 +35,7 @@ la verificación (RNF-05).
 
 ## 3. Verificación
 
-- **CI en verde** en cada commit de la rama: 41 pruebas de tenant-api, 16 de platform-api y 8 de
+- **CI en verde** en cada commit de la rama: 42 pruebas de tenant-api, 16 de platform-api y 8 de
   tenant-ui, más lint y build de ambas UIs.
 - **Escenario de demostración:** ver el README, sección *Flujo de prueba* (pasos 1 a 8).
 

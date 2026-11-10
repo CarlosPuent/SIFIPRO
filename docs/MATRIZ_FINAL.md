@@ -3,7 +3,7 @@
 > **Corte:** 2026-11-10 · **Rama:** `feature/avance-final` → `main`
 > **Requerimientos:** los de la propuesta aprobada (Entregable 1), con su numeración original.
 > **Evidencia automática:** GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push
-> **41 pruebas de tenant-api** (incluidas pruebas de integración con PostgreSQL real vía
+> **42 pruebas de tenant-api** (incluidas pruebas de integración con PostgreSQL real vía
 > Testcontainers), **16 de platform-api** y **8 pruebas unitarias de tenant-ui**, además del lint y
 > el build de ambas interfaces.
 > **Datos demo:** `docker compose down -v && docker compose up --build -d`. Credenciales en el README.
@@ -22,7 +22,7 @@ escenario indicado · *Parcial* = funciona una parte y se indica qué falta.
 | RF-05 | Registrar clientes finales dentro de un tenant. | Finalizado | 100 | **Customers → New Customer**; email único por comercio. |
 | RF-06 | Otorgar puntos a un cliente por una compra. | Finalizado | 100 | **Transactions → New Transaction**; puntos calculados en el servidor y registrados en el ledger. |
 | RF-07 | Canjear puntos por un beneficio configurado. | Finalizado | 100 | **Redemptions → New Redemption**; valida saldo del programa y stock, con bloqueo optimista. |
-| RF-08 | Autenticar usuarios y diferenciar permisos por rol (plataforma, comercio, cliente). | Finalizado | 100 | Los **tres tipos de actor** existen: PLATFORM_ADMIN (platform-ui, secreto propio), ADMIN/STAFF (tenant-ui) y **CUSTOMER** (portal del cliente). El ADMIN concede el acceso desde el perfil (**Portal access**); el cliente entra en `http://<codigo>.localhost:5173/portal/login` y ve saldo, nivel, saldo por programa, recompensas disponibles e historial. Un token de cliente solo sirve en `/api/portal/**` (403 en el resto) y uno del personal no entra al portal (403); revocar el acceso corta la sesión del cliente. Pruebas `CustomerPortalIntegrationTest` (7). |
+| RF-08 | Autenticar usuarios y diferenciar permisos por rol (plataforma, comercio, cliente). | Finalizado | 100 | Los **tres tipos de actor** existen: PLATFORM_ADMIN (platform-ui, secreto propio), ADMIN/STAFF (tenant-ui) y **CUSTOMER** (portal del cliente). El ADMIN concede el acceso desde el perfil (**Portal access**); el cliente entra en `http://<codigo>.localhost:5173/portal/login` y ve saldo, nivel, saldo por programa, recompensas disponibles e historial. Un token de cliente solo sirve en `/api/portal/**` (403 en el resto) y uno del personal no entra al portal (403); revocar el acceso corta la sesión del cliente. Pruebas `CustomerPortalIntegrationTest` (8). |
 | RF-09 | Registrar en una bitácora de auditoría cada otorgamiento, canje o ajuste de puntos. | Finalizado | 100 | **Audit Log** (ADMIN) y ajustes con motivo obligatorio; `points_movements` con autor. |
 | RF-10 | Reportes básicos de puntos otorgados y canjeados para el administrador de comercio. | Finalizado | 100 | **Reports**: indicadores, series por día/mes, top clientes y recompensas, niveles, alertas de stock; exportación **CSV** y **reporte formal en PDF** (`GET /api/reports/export/report.pdf`, prueba de aislamiento incluida). Además, **Overview** en platform-ui: reporte de actividad de toda la plataforma, con CSV. |
 
@@ -36,7 +36,7 @@ escenario indicado · *Parcial* = funciona una parte y se indica qué falta.
 | RNF-02 | HTTPS + autenticación JWT. | Parcial | 50 | JWT HS512 con secretos separados por plano y revalidación de usuario/cliente y tenant en cada petición. **HTTPS:** el entorno entregado es local (Docker en `localhost`); en un despliegue, TLS se termina en el proxy inverso (nginx) con un certificado del dominio. |
 | RNF-03 | Acciones principales en 3 clics o menos. | Finalizado | 100 | Conteo de clics del Avance 1; nuevas acciones: exportar PDF (1), conceder acceso al portal (3), editar comercio (2). |
 | RNF-04 | Ambiente reproducible con Docker. | Finalizado | 100 | `docker compose up --build -d` levanta 5 contenedores, aplica V1–V5 y siembra los datos demo; el README describe la instalación en 7 pasos. |
-| RNF-05 | Arquitectura en capas + pruebas automatizadas. | Finalizado | 100 | controller → service → repository → entity/DTO; **65 pruebas automatizadas** (41 tenant-api, 16 platform-api, 8 frontend) ejecutadas por **CI en GitHub Actions** en cada push. |
+| RNF-05 | Arquitectura en capas + pruebas automatizadas. | Finalizado | 100 | controller → service → repository → entity/DTO; **66 pruebas automatizadas** (42 tenant-api, 16 platform-api, 8 frontend) ejecutadas por **CI en GitHub Actions** en cada push. |
 | RNF-06 | Agregar tenants sin cambios estructurales. | Finalizado | 100 | Crear un comercio solo inserta filas; no hay DDL ni reinicios. |
 
 ## 3. Cambios respecto a la propuesta

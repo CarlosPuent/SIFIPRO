@@ -182,6 +182,25 @@ class CustomerPortalIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void loginFromAMerchantSubdomainOrigin_isNotBlockedByCors() throws Exception {
+        // Browsers send Origin on POST; nginx forwards it from <code>.localhost:5173.
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .header("Origin", "http://demo.localhost:5173")
+                        .content("{\"email\":\"admin@sifipro.com\",\"password\":\"Admin123!\",\"tenantCode\":\"demo\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/portal/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .header("Origin", "http://cafe-norte.localhost:5173")
+                        .content(loginJson("cafe-norte", PORTAL_EMAIL, PORTAL_PASSWORD)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .header("Origin", "https://sitio-malicioso.com")
+                        .content("{\"email\":\"admin@sifipro.com\",\"password\":\"Admin123!\"}"))
+                .andExpect(status().isForbidden());
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private String portalLogin(String tenantCode) throws Exception {

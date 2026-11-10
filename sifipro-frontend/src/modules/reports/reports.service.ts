@@ -90,7 +90,8 @@ export async function getReportsData(
   };
 }
 
-export type CsvExportKind = "summary" | "purchases";
+// "report" is the formal PDF report (Avance final); the others are CSV exports.
+export type CsvExportKind = "summary" | "purchases" | "report";
 
 function fileNameFromDisposition(header: unknown, fallback: string): string {
   if (typeof header !== "string") return fallback;
@@ -118,14 +119,17 @@ export async function downloadReportCsv(
   range: ReportRange,
 ): Promise<void> {
   try {
-    const response = await apiClient.get<Blob>(`/api/reports/export/${kind}.csv`, {
+    const extension = kind === "report" ? "pdf" : "csv";
+    const response = await apiClient.get<Blob>(`/api/reports/export/${kind}.${extension}`, {
       params: scopeParams(programConfigId, range),
       responseType: "blob",
+      // Rendering the PDF aggregates several reports; allow more than the default 10 s.
+      timeout: 30000,
     });
 
     const fileName = fileNameFromDisposition(
       response.headers["content-disposition"],
-      `sifipro-${kind}.csv`,
+      `sifipro-${kind}.${extension}`,
     );
     const url = URL.createObjectURL(response.data);
     const link = document.createElement("a");

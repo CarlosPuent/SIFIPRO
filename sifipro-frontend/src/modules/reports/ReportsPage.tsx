@@ -1,4 +1,4 @@
-import { Download, RefreshCw } from "lucide-react";
+import { Download, FileText, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../../auth/useAuth";
@@ -155,9 +155,14 @@ export function ReportsPage() {
     setExporting(kind);
     try {
       await downloadReportCsv(kind, currentProgramId, range);
-      toast.success(kind === "summary" ? "Summary CSV downloaded." : "Purchases CSV downloaded.");
+      const downloaded: Record<CsvExportKind, string> = {
+        summary: "Summary CSV downloaded.",
+        purchases: "Purchases CSV downloaded.",
+        report: "PDF report downloaded.",
+      };
+      toast.success(downloaded[kind]);
     } catch (error) {
-      toast.error(`Could not export CSV. ${extractErrorMessage(error)}`);
+      toast.error(`Could not export the ${kind === "report" ? "PDF" : "CSV"}. ${extractErrorMessage(error)}`);
     } finally {
       setExporting(null);
     }
@@ -295,13 +300,22 @@ export function ReportsPage() {
             </Button>
             <Button
               size="sm"
-              variant="primary"
               leftIcon={<Download className="h-3.5 w-3.5" />}
               isLoading={exporting === "purchases"}
               disabled={exporting !== null}
               onClick={() => void handleExport("purchases")}
             >
               Export purchases CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              leftIcon={<FileText className="h-3.5 w-3.5" />}
+              isLoading={exporting === "report"}
+              disabled={exporting !== null}
+              onClick={() => void handleExport("report")}
+            >
+              Export PDF report
             </Button>
           </div>
         </div>

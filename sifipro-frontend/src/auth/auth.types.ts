@@ -26,4 +26,6 @@ export type AuthResponse = {
 export type LoginRequest = {
   email: string;
   password: string;
+  /** Tenant code from the subdomain (RF-01); the backend only admits that tenant's users. */
+  tenantCode?: string;
 };

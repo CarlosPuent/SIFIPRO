@@ -37,9 +37,9 @@ jobs:
       APP_JWT_SECRET: ci-tenant-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJ
       PLATFORM_JWT_SECRET: ci-platform-secret-9876543210-zyxwvutsrqponmlkjihgfedcba-JIHGFEDCBA
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -58,6 +58,18 @@ jobs:
         run: |
           set -o pipefail
           mvn -B -ntp test 2>&1 | tee ../platform-api.log
+
+      # Deja constancia del total de pruebas ejecutadas en el resumen del check.
+      - name: Total de pruebas
+        if: always()
+        run: |
+          for d in sifipro-backend sifipro-platform-api; do
+            [ -d "$d/target/surefire-reports" ] || continue
+            total=$(grep -h "<testsuite" $d/target/surefire-reports/TEST-*.xml \
+              | sed -E 's/.* tests="([0-9]+)".* failures="([0-9]+)".*/\1 \2/' \
+              | awk '{t+=$1; f+=$2} END {print t" pruebas, "f" fallidas"}')
+            echo "::notice title=$d::$total"
+          done
 
       # Resume los errores como anotaciones, visibles en el resumen del check.
       - name: Resumen de errores
@@ -90,9 +102,9 @@ jobs:
       run:
         working-directory: ${{ matrix.app }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm

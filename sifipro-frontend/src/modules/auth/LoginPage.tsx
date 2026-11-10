@@ -1,7 +1,7 @@
 import axios from "axios";
-import { Zap } from "lucide-react";
+import { Gift, Store, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { defaultRoute } from "../../app/router/routes";
 import { clearAuthNotice, readAuthNotice } from "../../auth/auth.service";
 import { useAuth } from "../../auth/useAuth";
@@ -9,6 +9,9 @@ import { Button } from "../../components/ui/Button";
 import { ThemeToggle } from "../../components/ui/ThemeToggle";
 import { FormField, TextInput } from "../../components/ui/form";
 import { extractErrorMessage } from "../../lib/error-utils";
+import { currentTenantCode } from "../../lib/tenant-subdomain";
+import { getPublicTenant } from "../portal/portal.service";
+import type { PublicTenant } from "../portal/portal.types";
 import {
   applyTheme,
   getInitialTheme,
@@ -59,6 +62,26 @@ export function LoginPage() {
     clearAuthNotice();
   }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // RF-01 · opened on a merchant subdomain (e.g. demo.localhost:5173): brand the screen
+  // with that merchant and only admit its users.
+  const [subdomainCode] = useState<string | null>(() => currentTenantCode());
+  const [subdomainTenant, setSubdomainTenant] = useState<PublicTenant | null>(null);
+  const [subdomainMissing, setSubdomainMissing] = useState(false);
+
+  useEffect(() => {
+    if (!subdomainCode) return;
+    let isActive = true;
+    getPublicTenant(subdomainCode)
+      .then((tenant) => {
+        if (isActive) setSubdomainTenant(tenant);
+      })
+      .catch(() => {
+        if (isActive) setSubdomainMissing(true);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [subdomainCode]);
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
 
   const canSubmit = useMemo(
@@ -88,6 +111,7 @@ export function LoginPage() {
       await login({
         email: email.trim(),
         password,
+        ...(subdomainCode ? { tenantCode: subdomainCode } : {}),
       });
 
       navigate(defaultRoute, { replace: true });
@@ -165,6 +189,23 @@ export function LoginPage() {
                 SIFIPRO
               </span>
             </div>
+
+            {subdomainTenant ? (
+              <div className="mb-6 flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-900/60 dark:bg-indigo-950/40">
+                <Store className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                <div>
+                  <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">{subdomainTenant.name}</p>
+                  <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80">
+                    Signing in to {subdomainTenant.code}.sifipro
+                  </p>
+                </div>
+              </div>
+            ) : null}
+            {subdomainMissing ? (
+              <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-300">
+                No merchant is registered at "{subdomainCode}".
+              </p>
+            ) : null}
 
             {/* Heading */}
             <div>
@@ -255,6 +296,15 @@ export function LoginPage() {
             <div className="mt-8 border-t border-slate-200/80 pt-6 dark:border-slate-800/80">
               <p className="text-center text-xs text-slate-400 dark:text-slate-600">
                 Tenant-scoped loyalty operations platform
+              </p>
+              <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                <Link
+                  to="/portal/login"
+                  className="inline-flex items-center gap-1.5 font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  Are you a customer? Check your points
+                </Link>
               </p>
             </div>
           </div>

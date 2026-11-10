@@ -44,6 +44,8 @@ export interface CustomerProfileResponse {
   email: string;
   phone: string | null;
   active: boolean;
+  /** RF-08 · the customer can sign in to the self-service portal. */
+  portalEnabled?: boolean;
   pointsBalance: number;
   memberSince: string;
   tier: string;

@@ -1,4 +1,4 @@
-import { ArrowLeft, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, KeyRound, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { isAdmin } from "../../auth/role-utils";
@@ -16,6 +16,7 @@ import type {
 } from "./customer-profile.types";
 import { useProgram } from "../program-config/useProgram";
 import { AdjustPointsModal } from "./components/AdjustPointsModal";
+import { PortalAccessModal } from "./components/PortalAccessModal";
 import { CustomerActivityFeed } from "./components/CustomerActivityFeed";
 import { CustomerProfileHeader } from "./components/CustomerProfileHeader";
 import { CustomerStatCards } from "./components/CustomerStatCards";
@@ -98,6 +99,7 @@ export function CustomerProfilePage() {
   // Manual adjustments are ADMIN-only in tenant-api.
   const canAdjustPoints = isAdmin(user);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
+  const [isPortalOpen, setIsPortalOpen] = useState(false);
 
   const [profile, setProfile] = useState<CustomerProfileResponse | null>(null);
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
@@ -242,6 +244,15 @@ export function CustomerProfilePage() {
           {canAdjustPoints ? (
             <Button
               size="sm"
+              leftIcon={<KeyRound className="h-3.5 w-3.5" />}
+              onClick={() => setIsPortalOpen(true)}
+            >
+              {profile.portalEnabled ? "Portal: enabled" : "Portal access"}
+            </Button>
+          ) : null}
+          {canAdjustPoints ? (
+            <Button
+              size="sm"
               leftIcon={<SlidersHorizontal className="h-3.5 w-3.5" />}
               onClick={() => setIsAdjustOpen(true)}
             >
@@ -260,6 +271,20 @@ export function CustomerProfilePage() {
           defaultProgramId={currentProgramId}
           onClose={() => setIsAdjustOpen(false)}
           onAdjusted={() => {
+            void loadData();
+          }}
+        />
+      ) : null}
+
+      {isPortalOpen ? (
+        <PortalAccessModal
+          customerId={profile.id}
+          customerName={`${profile.firstName} ${profile.lastName}`}
+          customerEmail={profile.email}
+          tenantCode={user?.tenant.code ?? ""}
+          portalEnabled={Boolean(profile.portalEnabled)}
+          onClose={() => setIsPortalOpen(false)}
+          onChanged={() => {
             void loadData();
           }}
         />
